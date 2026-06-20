@@ -1,0 +1,24 @@
+// FredOrb — FRED's living presence.
+//
+// One element represents FRED everywhere: landing hero, sidebar, chat avatar,
+// empty states. It's pure CSS (see .fred-orb in styles/index.css) so it's
+// instant and works offline. `state` drives the animation:
+//   idle | listening | thinking | working | speaking
+//
+// Usage: <FredOrb size={72} state="idle" /> or <FredOrb size={34} glyph={false} />
+
+export default function FredOrb({ size = 72, state = 'idle', glyph = true, className = '', title }) {
+  const style = { '--orb': typeof size === 'number' ? `${size}px` : size };
+  return (
+    <span
+      className={`fred-orb is-${state} ${className}`}
+      style={style}
+      role="img"
+      aria-label={title || 'FRED'}
+      title={title}
+    >
+      <span className="fred-orb__ring" aria-hidden="true" />
+      {glyph && size >= 26 && <span className="fred-orb__glyph">F</span>}
+    </span>
+  );
+}

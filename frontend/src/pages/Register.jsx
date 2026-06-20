@@ -24,13 +24,13 @@ export default function Register() {
 
     return (
         <div>
-            <h1>Set up G</h1>
+            <h1>Set up FRED</h1>
             {step === 1 && <RegistrationForm onSuccess={handleRegistration} />}
             {step === 2 && <PreferencesForm onSuccess={handlePreferences} />}
             {step === 3 && (
                 <div>
                     <h2>Connect Google</h2>
-                    <p>Link your Google account so G can access your calendar and Gmail.</p>
+                    <p>Link your Google account so FRED can access your calendar and Gmail.</p>
                     <GoogleSignOn />
                 </div>
             )}

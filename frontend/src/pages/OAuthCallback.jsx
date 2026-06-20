@@ -26,12 +26,12 @@ export default function OAuthCallback() {
       if (isNewUser) {
         navigate('/onboard/step1', { replace: true });
       } else {
-        navigate('/tasks', { replace: true });
+        navigate('/today', { replace: true });
       }
     } else {
       navigate('/signin', { replace: true });
     }
   }, [params, navigate]);
 
-  return <p>Signing you in...</p>;
+  return <div className="page-loading">Signing you in to FRED…</div>;
 }

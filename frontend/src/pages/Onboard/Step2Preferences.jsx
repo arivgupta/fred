@@ -264,7 +264,7 @@ export default function Step2Preferences() {
           onClick={handleActivate}
           disabled={submitting}
         >
-          {submitting ? 'Activating…' : 'Activate G'}
+          {submitting ? 'Activating…' : 'Activate FRED'}
         </button>
       </div>
       {/* [GenAI Use] LLM Response End */}

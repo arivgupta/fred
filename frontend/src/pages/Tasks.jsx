@@ -125,11 +125,15 @@ export default function Tasks() {
 
   return (
     <div className="page">
-      <h1 className="page-title">Task Dashboard</h1>
+      <div className="page-header">
+        <div className="page-eyebrow">Mission control</div>
+        <h1 className="page-title">What FRED’s working on</h1>
+        <p className="page-subtitle">Everything FRED is handling for you right now — and anything that needs your okay.</p>
+      </div>
       {loading && <p className="task-empty">Loading…</p>}
       {!loading && error && <p className="error-msg">{error}</p>}
       {!loading && !error && active.length === 0 && issues.length === 0 && (
-        <p className="task-empty">No tasks yet. Text or chat G to schedule one.</p>
+        <p className="task-empty">Nothing in flight. Call or chat FRED to hand him something.</p>
       )}
 
       {active.length > 0 && (
@@ -146,7 +150,7 @@ export default function Tasks() {
             Issues ({issues.length})
           </h2>
           <p className="card-description" style={{ marginBottom: 12 }}>
-            These tasks didn't complete successfully. G couldn't deliver, or something else went wrong.
+            These didn’t complete. FRED couldn’t deliver, or something else went wrong.
           </p>
           <div className="task-list">
             {issues.map((t) => (
