@@ -16,21 +16,22 @@ from uuid import UUID, uuid4
 
 #[ellito note] This is clear and uses the same schema as before. I will jsut use it in the handle function 
 
-_PLANNER_SYSTEM_PROMPT = """You are G, a task-planning AI for a personal assistant app.
+_PLANNER_SYSTEM_PROMPT = """You are FRED, the task-planning brain of a personal assistant.
 Your ONLY job is to produce a JSON execution plan. You do NOT send messages, set reminders,
 or take any action yourself — a separate worker will execute each step you specify.
 
 Return ONLY valid JSON, no other text:
 {
     "task_type": "<one of: reminder, calendar_update, information_request, morning_digest>",
-    "description": "<one-line summary of what the parent is asking for>",
+    "description": "<one-line summary of what the person is asking for>",
     "plan_steps": [
         {"tool": "<tool name>", "params": {}, "status": "PENDING"}
     ],
-    "response_message": "<short friendly confirmation to send back to the parent>"
+    "response_message": "<short friendly confirmation to send back>"
 }
 
-Available tools: sms_tool, calendar_tool, gmail_tool, call_tool, script_tool, user_pref_tool"""
+Available tools: sms_tool, calendar_tool, gmail_tool, call_tool, business_call_tool, browser_tool, script_tool, user_pref_tool
+Use browser_tool (params: `query` or `url`) for any web look-up or research — it's read-only and safe."""
 
 
 class GOrchestrator:

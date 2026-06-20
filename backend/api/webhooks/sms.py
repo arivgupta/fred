@@ -13,6 +13,7 @@ from adapters.communication.sms_tool import SMSTool
 from adapters.communication.user_call_adapter import UserCallAdapter
 from adapters.communication.user_sms_adapter import UserSMSAdapter
 from adapters.google.user_calendar_adapter import UserCalendarAdapter
+from adapters.web.user_browser_adapter import UserBrowserAdapter
 from adapters.llm.claude_adapter import ClaudeAdapter
 from config import TWILIO_AUTH_TOKEN
 from database import get_db
@@ -39,8 +40,8 @@ _orch = GOrchestrator()
 
 # TODO: swap with the deployed signup URL once the frontend ships.
 ONBOARDING_REPLY = (
-    "Hi! You don't have a G account yet. Sign up at our registration page "
-    "to get started. Reply HELP for support."
+    "Hi, this is FRED! You don't have an account yet. Sign up at our "
+    "registration page to get started. Reply HELP for support."
 )
 
 
@@ -51,7 +52,8 @@ ONBOARDING_REPLY = (
 # follow-ups when present. Mirror the voice prompt shape so the orchestrator
 # can swap in cleanly later."
 # [GenAI Use] LLM Response Start
-SMS_SYSTEM_PROMPT = """You are G, an AI personal secretary helping a parent over SMS.
+SMS_SYSTEM_PROMPT = """You are FRED — a warm, capable, dependable AI assistant (Friendly, Resourceful, Everyday Deputy) helping someone over SMS.
+Be warm and human, never robotic. Be honest about what you did and didn't do.
 Your response_message will be sent back as a text message, so keep it short (under 160 characters when possible) and avoid markdown or emoji.
 
 Respond with a JSON object only, no extra text:
@@ -64,7 +66,9 @@ Respond with a JSON object only, no extra text:
     "response_message": "<short reply, will be sent as SMS>"
 }
 
-Tools you can use: sms_tool, calendar_tool, gmail_tool, call_tool, business_call_tool
+Tools you can use: sms_tool, calendar_tool, gmail_tool, call_tool, business_call_tool, browser_tool
+
+`browser_tool` is FRED's own web browser — use it to research the open web or read a page whenever the answer isn't already in front of you (look-ups, prices, hours, addresses, "find me a…"). Params: `query` (what to find) OR `url` (a page to read). It's read-only and safe — don't ask before browsing, just do it and use the results. Prefer browsing over guessing.
 
 `business_call_tool` is used when the parent asks you to phone an external business or person on their behalf (e.g. "call the pizza place and order a large pepperoni"). Params: `to` (business phone number), `goal` (one sentence describing exactly what to accomplish, including any order details / times / addresses the parent gave), optional `business_name`. Only plan it when you actually have a phone number to dial; otherwise ask.
 
@@ -219,6 +223,7 @@ async def inbound_sms(
                     Tools.SMS_TOOL: UserSMSAdapter(user, sms_tool=_sms),
                     Tools.CALL_TOOL: UserCallAdapter(user, call_tool=_call),
                     Tools.BUSINESS_CALL_TOOL: UserBusinessCallAdapter(user, call_tool=_call),
+                    Tools.BROWSER_TOOL: UserBrowserAdapter(user),
                 }
                 TaskRunner(tool_registry).run(in_mem)
                 task_service.update_task_status(db, db_task.id, in_mem.status)

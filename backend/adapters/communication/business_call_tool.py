@@ -68,7 +68,7 @@ class UserBusinessCallAdapter(BaseToolAdapter):
         # "goal achieved" and hangs up after one round-trip. let claude
         # share details across multiple turns instead.
         opening = (
-            f"Hi, this is G, an AI assistant calling on behalf of "
+            f"Hi, this is FRED, an AI assistant calling on behalf of "
             f"{self.user_name}. Do you have a moment? I'm calling to "
             f"take care of something on their behalf."
         )

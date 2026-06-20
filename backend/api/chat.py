@@ -19,6 +19,7 @@ from adapters.communication.user_call_adapter import UserCallAdapter
 from adapters.communication.user_sms_adapter import UserSMSAdapter
 from adapters.google.user_calendar_adapter import UserCalendarAdapter
 from adapters.google.user_gmail_adapter import UserGmailAdapter
+from adapters.web.user_browser_adapter import UserBrowserAdapter
 from adapters.llm.claude_adapter import ClaudeAdapter
 from database import get_db
 from models.datatypes import MessageDirection, TaskStatus, Tools
@@ -42,7 +43,8 @@ _orch = GOrchestrator()
 
 # [GenAI Use] Prompt: write a chat system prompt for G that matches the sms one — same JSON schema with task_type, description, plan_steps, response_message. chat can be slightly longer than sms, conversational tone. also needs to handle smalltalk as a no-op task type
 # [GenAI Use] LLM Response Start
-_CHAT_SYSTEM_PROMPT = '''You are G, an AI personal secretary helping a parent over chat.
+_CHAT_SYSTEM_PROMPT = '''You are FRED — a warm, capable, dependable AI assistant. Your name stands for Friendly, Resourceful, Everyday Deputy, and that's exactly how you act: like the most organized friend the person has, who can actually get things done. You're helping someone over chat.
+Be warm and natural, never robotic or sycophantic. A little dry wit is welcome. Always be honest about what you did and didn't do.
 Your response_message should be conversational — no markdown, no bullet points.
 
 Respond with a JSON object only, no extra text:
@@ -55,8 +57,10 @@ Respond with a JSON object only, no extra text:
     "response_message": "<friendly reply to send back to the parent>"
 }
 
-Use smalltalk when the parent is just chatting and no tools are needed — leave plan_steps empty.
-Tools you can use: sms_tool, calendar_tool, gmail_tool, call_tool, business_call_tool
+Use smalltalk when the person is just chatting and no tools are needed — leave plan_steps empty.
+Tools you can use: sms_tool, calendar_tool, gmail_tool, call_tool, business_call_tool, browser_tool
+
+`browser_tool` is FRED's own web browser — your superpower for actually going and finding things out. Use it whenever the answer isn't already in front of you: look-ups, research, comparisons, prices, store hours, addresses, availability, "find me a…", "what's the…". Params: `query` (what to find, e.g. "pediatric dentists open Saturday near Santa Monica") OR `url` (a specific page to read and summarize). It is read-only and safe — do NOT ask for confirmation before browsing; just do it, then use the results in your reply. Prefer browsing over guessing or saying you can't help.
 
 `call_tool` is used to call the parent directly (e.g. "call me right now", "call me in 30 minutes"). Params: `message` (what to say when the parent picks up). This is different from `business_call_tool` which calls external businesses.
 
@@ -80,7 +84,7 @@ If the user gives an ambiguous hour like "9:00": pick the closest future time by
 '''
 
 # After tools execute, synthesize a natural reply from the results.
-_SYNTHESIS_PROMPT = 'You are G, a helpful AI secretary. Respond with ONLY valid JSON: {"response_message": "<short friendly reply>"}'
+_SYNTHESIS_PROMPT = 'You are FRED, a warm, capable AI assistant. Using the tool results provided, write a short, friendly, honest reply. Respond with ONLY valid JSON: {"response_message": "<short friendly reply>"}'
 # [GenAI Use] LLM Response End
 # [GenAI Use] Reflection: same JSON contract as SMS keeps the orchestrator happy. smalltalk escape hatch stops every "hi" from creating a DB task
 
@@ -282,6 +286,7 @@ async def chat(body: ChatRequest, request: Request, db: Session = Depends(get_db
             Tools.BUSINESS_CALL_TOOL: UserBusinessCallAdapter(user, call_tool=_call),
             Tools.CALENDAR_TOOL: UserCalendarAdapter(user),
             Tools.GMAIL_TOOL: UserGmailAdapter(user),
+            Tools.BROWSER_TOOL: UserBrowserAdapter(user),
         }
     else:
         tool_registry = {Tools.SMS_TOOL: _sms, Tools.CALL_TOOL: _call}

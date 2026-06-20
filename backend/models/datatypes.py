@@ -22,6 +22,9 @@ class Tools(str, Enum):
     CALENDAR_DELETE_TOOL = "calendar_delete_tool"
     SCRIPT_TOOL         = "script_tool"
     GMAIL_TOOL          = "gmail_tool"
+    # browser_tool: FRED's agentic web research. read-only, safe to run without
+    # confirmation. `query` to research the open web, or `url` to read a page.
+    BROWSER_TOOL        = "browser_tool"
 
     # add more as we write.
 
