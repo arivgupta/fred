@@ -1,7 +1,7 @@
-#cloud run image for g backend.
+#cloud run image for FRED backend.
 #build + deploy:
-#  gcloud builds submit --tag gcr.io/PROJECT_ID/g-backend ./backend
-#  gcloud run deploy g-backend --image gcr.io/PROJECT_ID/g-backend --region us-west1 --allow-unauthenticated
+#  gcloud builds submit --tag gcr.io/PROJECT_ID/fred-backend ./backend
+#  gcloud run deploy fred-backend --image gcr.io/PROJECT_ID/fred-backend --region us-west1 --allow-unauthenticated
 
 FROM python:3.11-slim AS base
 

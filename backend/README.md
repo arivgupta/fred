@@ -1,8 +1,9 @@
-# G — backend
+# FRED — backend
 
-FastAPI service. Talks to Supabase (Postgres), Twilio (SMS + voice), Anthropic
-(LLM), Deepgram (STT), and Google (Calendar + Gmail). Deployed to Google Cloud
-Run.
+FastAPI service behind FRED, the assistant you can actually call. Talks to
+Supabase (Postgres), Twilio (SMS + voice), Anthropic (LLM), Deepgram (STT),
+Google (Calendar + Gmail), and the open web via FRED's browser tool
+(Tavily / Brave). Deployed to Google Cloud Run.
 
 ## Quick start (local)
 
@@ -52,9 +53,9 @@ enabled, and the Cloud Run + Cloud Build APIs enabled.
 ```bash
 # from backend/
 gcloud config set project YOUR_PROJECT_ID
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/g-backend .
-gcloud run deploy g-backend \
-    --image gcr.io/YOUR_PROJECT_ID/g-backend \
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/fred-backend .
+gcloud run deploy fred-backend \
+    --image gcr.io/YOUR_PROJECT_ID/fred-backend \
     --region us-west1 \
     --platform managed \
     --allow-unauthenticated \
@@ -85,8 +86,14 @@ backend/
   api/                 FastAPI routers
     webhooks/          /webhooks/sms, /webhooks/call
     auth/              /auth/google/callback (OAuth)
-  adapters/            external service wrappers (llm, twilio, google, deepgram)
-  orchestrator/        LangChain agent + task planner + escalation engine
+  adapters/            external service wrappers
+    llm/               Claude / GPT adapters
+    communication/     Twilio SMS, user calls, outbound business calls
+    google/            Calendar + Gmail
+    speech/            Deepgram STT
+    web/               FRED's browser — agentic web research (Tavily / Brave)
+  orchestrator/        task planner + escalation engine
+
   workers/             celery app + task runner
   middleware/          twilio signature validation
 ```

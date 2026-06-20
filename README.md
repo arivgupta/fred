@@ -1,12 +1,33 @@
-# G: Parent's personal secretary
+# FRED — the assistant you can actually call
 
-This is the project directory for CS130 project.
+> Formerly **G** (G.ai), a CS130 capstone. **FRED** is the rebranded fork: a
+> warm, capable phone assistant — Friendly, Resourceful, Everyday Deputy — with
+> a beautiful new front end and a browser of his own.
+>
+> 📖 Read **[VISION.md](VISION.md)** for the product direction and the bet behind FRED.
 
-## Using G (non locally):
+FRED is a personal AI assistant you reach the way you'd reach a friend: **call
+him, text him, or chat on the web.** He manages your calendar and inbox, sets
+reminders, places phone calls to businesses on your behalf, and — new in FRED —
+**browses the open web** to research and get things done, then reports back.
 
-Since this project is in testing mode, we will need to add your email to the testing users for you to use this app. Contact a project member or email nylaz@ucla.edu with the email you wish to use for G so we can add you as a testing user.
+## What's new in the FRED fork
 
-Once approved, you can begin using G at this link: cs-130-capstone-project-silk.vercel.app
+- **Brand & identity** — FRED, with the living *orb* presence used across the
+  whole experience (landing, sidebar, chat, call screen).
+- **New front end** — a public landing page (call FRED with no account), a calm
+  **Today** home, a redesigned **Talk to FRED** chat, and a warm, premium design
+  system. See `frontend/`.
+- **FRED's browser** — a new agentic web-research tool (`adapters/web/`) wired
+  through the same planner / tool-runner / dispatch path as every other tool.
+  Set `TAVILY_API_KEY` (preferred) or `BRAVE_API_KEY` to enable it; it degrades
+  gracefully when neither is set.
+- **Consistent persona** — one warm, honest FRED voice across chat, SMS, and
+  voice calls.
+
+## Using FRED (non locally):
+
+Since this project is in testing mode, we will need to add your email to the testing users for you to use this app. Contact a project member with the email you wish to use for FRED so we can add you as a testing user.
 
 ## Local Setup
 
@@ -63,7 +84,7 @@ Save both.
 
 ### 5. Test Voice
 
-- **Voice**: call your Twilio number — you should hear "Hi, this is G. What can I help you with?", and after you speak, hear your speech repeated back before it hangs up.
+- **Voice**: call your Twilio number — you should hear "Hi, this is FRED. What can I help you with?", and after you speak, hear your speech repeated back before it hangs up.
 
 ### Testing:
 We use pytest for testing. you can add your test under the /tests folder. 
@@ -116,9 +137,13 @@ If you create new files or change directory structures, please run the 'tree' co
 │   │   │   ├── base_llm_adapter.py
 │   │   │   ├── claude_adapter.py
 │   │   │   └── gpt_adapter.py
-│   │   └── speech
+│   │   ├── speech
+│   │   │   ├── __init__.py
+│   │   │   └── deepgram_adapter.py
+│   │   └── web
 │   │       ├── __init__.py
-│   │       └── deepgram_adapter.py
+│   │       ├── browser_tool.py          # FRED's agentic web research (Tavily/Brave)
+│   │       └── user_browser_adapter.py  # user-scoped wrapper (localizes "near me")
 │   ├── alembic.ini
 │   ├── api
 │   │   ├── __init__.py
@@ -232,6 +257,7 @@ If you create new files or change directory structures, please run the 'tree' co
 │   │   ├── auth.js
 │   │   ├── components
 │   │   │   ├── Banner.jsx
+│   │   │   ├── FredOrb.jsx          # FRED's living-presence orb (pure CSS/SVG)
 │   │   │   ├── common
 │   │   │   ├── FamilyMemberRow.jsx
 │   │   │   ├── MessageBubble.jsx
@@ -249,6 +275,8 @@ If you create new files or change directory structures, please run the 'tree' co
 │   │   │   └── TaskContext.jsx
 │   │   ├── main.jsx
 │   │   ├── pages
+│   │   │   ├── Landing.jsx          # public front door (orb hero + "Call FRED")
+│   │   │   ├── Today.jsx            # calm home / mission control
 │   │   │   ├── Chat.jsx
 │   │   │   ├── Conversations.jsx
 │   │   │   ├── OAuthCallback.jsx
