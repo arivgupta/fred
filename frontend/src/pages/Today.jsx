@@ -15,6 +15,8 @@ const QUICK_ACTIONS = [
   { icon: '🗓️', label: 'Check my day', prefill: "What's on my calendar today?" },
   { icon: '☎️', label: 'Make a call for me', prefill: 'Can you call ' },
   { icon: '🌐', label: 'Look something up', prefill: 'Can you find out ' },
+  { icon: '⏰', label: 'Set up an automation', prefill: 'Every morning, ' },
+  { icon: '✈️', label: 'Watch for a deal', prefill: 'Watch for ' },
 ];
 
 function greeting() {

@@ -126,7 +126,7 @@ export default function Tasks() {
   return (
     <div className="page">
       <div className="page-header">
-        <div className="page-eyebrow">Mission control</div>
+        <div className="page-eyebrow">Your tasks</div>
         <h1 className="page-title">What FRED’s working on</h1>
         <p className="page-subtitle">Everything FRED is handling for you right now — and anything that needs your okay.</p>
       </div>

@@ -16,7 +16,7 @@ export default function SignIn() {
       <div className="signup-card">
         <FredOrb size={78} state="idle" />
         <div className="signup-logo">Welcome back</div>
-        <p className="signup-tagline">Sign in to your FRED mission control.</p>
+        <p className="signup-tagline">Sign in to pick up where you and FRED left off.</p>
         <GoogleSignOn mode="signin" />
       </div>
     </div>

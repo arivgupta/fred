@@ -2,10 +2,11 @@ import FredOrb from './FredOrb';
 
 const SUGGESTIONS = [
   'Remind me to pick up Emma from soccer at 4pm',
-  'Reschedule my dentist to next week and text me to confirm',
+  'Every morning, prep my inbox and text me what needs me',
+  'Watch United for cheap award flights LA to Tokyo with miles',
   "What's on my calendar tomorrow?",
-  'Find a pediatric dentist open Saturday near me',
-  'Call the pizza place and order a large pepperoni',
+  'Audit my subscriptions and tell me what to cancel',
+  'Call the pharmacy and refill my prescription',
 ];
 
 export default function SuggestionPills({ onSelect }) {

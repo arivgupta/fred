@@ -13,29 +13,44 @@ const FEATURES = [
     body: "No app, no login, no menus. Dial the number and talk to FRED like a friend. He picks up, remembers you, and gets to work.",
   },
   {
-    icon: '🌐',
-    title: 'He has his own browser',
-    body: "FRED can open a real browser and go do things — research, compare prices, check hours, fill forms — then call or text you back with the answer.",
-  },
-  {
     icon: '🗓️',
-    title: 'Calendar & inbox, handled',
-    body: 'Reschedule the dentist, find the email from school, block your mornings. FRED reads, writes, and keeps your day untangled.',
+    title: 'Your calendar & inbox',
+    body: 'Reschedule the dentist, dig up the email from school, block off family time. FRED reads, writes, and keeps your week untangled.',
   },
   {
     icon: '☎️',
-    title: 'He makes the calls you dread',
-    body: "Phone the pizza place, the pharmacy, the doctor's office. FRED dials on your behalf, handles the back-and-forth, and texts you a summary.",
+    title: 'The calls you dread',
+    body: "The pharmacy, the doctor's office, the cable company. FRED dials on your behalf, sits through the hold music, and texts you a clear summary.",
+  },
+  {
+    icon: '🌐',
+    title: 'His own browser',
+    body: 'FRED opens a real browser to research, compare prices, check availability, and fill out forms — then reports back with the answer.',
+  },
+  {
+    icon: '⏰',
+    title: 'Daily automations',
+    body: 'Set it once and forget it: “Every morning, prep my inbox, flag what needs me, and text me my day.” FRED runs it on schedule, on his own.',
+  },
+  {
+    icon: '✈️',
+    title: 'Flights & deals, watched',
+    body: '“Watch United for award seats LA→Tokyo and ping me when the miles price drops.” FRED keeps an eye out and tells you the moment to book.',
+  },
+  {
+    icon: '🧾',
+    title: 'Audit your life',
+    body: 'FRED reviews your subscriptions, bills, and calendar, then tells you what to cancel, lower, move, or automate. Get your time and money back.',
   },
   {
     icon: '🔔',
-    title: 'Reminders that actually land',
-    body: 'Tell FRED once. He nudges you at the right time, on the right channel, and backs off when you ask for quiet hours.',
+    title: 'Reminders that land',
+    body: 'Tell FRED once. He nudges you at the right time, on the right channel, and goes quiet during your quiet hours.',
   },
   {
     icon: '🪪',
     title: 'Trust, by design',
-    body: 'FRED confirms anything that spends money or calls a stranger, logs everything in plain language, and lets you see exactly what he knows.',
+    body: 'He confirms anything that spends money or calls a stranger, logs everything in plain language, and lets you see exactly what he knows.',
   },
 ];
 
@@ -62,7 +77,7 @@ export default function Landing() {
           <a className="landing-link" href="#how">How it works</a>
           <a className="landing-link" href="#features">What he does</a>
           {loggedIn ? (
-            <button className="landing-btn" onClick={() => navigate('/today')}>Open mission control</button>
+            <button className="landing-btn" onClick={() => navigate('/today')}>Open dashboard</button>
           ) : (
             <>
               <Link className="landing-link" to="/signin">Sign in</Link>
@@ -79,9 +94,10 @@ export default function Landing() {
           The assistant you can<br /><span className="grad">actually call.</span>
         </h1>
         <p className="hero-sub">
-          FRED is your friendly, resourceful everyday deputy. He has your calendar, your inbox,
-          and a browser of his own. Pick up the phone, tell him what you need, and he handles it —
-          then calls you back when it’s done.
+          FRED is the deputy who runs your everyday life admin — the calls, the scheduling,
+          the inbox, the errands, and the recurring stuff that piles up. So a parent gets more
+          time with their kids, and a busy professional gets more focus on real work. Tell him
+          once, by phone or text; he handles it and reports back.
         </p>
         <div className="hero-cta">
           <a className="call-cta" href={`tel:${FRED_TEL}`}>
@@ -98,7 +114,7 @@ export default function Landing() {
       <section className="landing-section" id="features">
         <div className="section-heading">
           <h2>One deputy. Everything off your plate.</h2>
-          <p>FRED isn’t a chatbot that answers questions. He’s an assistant that gets things done — across the phone, your calendar, your inbox, and the open web.</p>
+          <p>Whether you want more time with your family or more focus at work, FRED takes the everyday admin, calls, and busywork off your hands — and can run it on autopilot, every single day.</p>
         </div>
         <div className="feature-grid">
           {FEATURES.map((f) => (
@@ -130,8 +146,8 @@ export default function Landing() {
       <section className="landing-cta-band">
         <div className="cta-card">
           <FredOrb size={84} state="speaking" />
-          <h2 style={{ marginTop: 18 }}>Give FRED a call.</h2>
-          <p>He’s waiting. Set a reminder, reschedule a meeting, or ask him to track something down.</p>
+          <h2 style={{ marginTop: 18 }}>Hand FRED your to‑do list.</h2>
+          <p>Reschedule a meeting, track down a deal, refill a prescription, or set up a daily automation. He’s waiting.</p>
           <a className="call-cta" href={`tel:${FRED_TEL}`}>
             <span className="call-icon">📞</span> {FRED_PHONE}
           </a>
