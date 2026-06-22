@@ -7,6 +7,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from backend.models.datatypes import TaskStatus
+from backend.utils.token_crypto import encrypt_token
 
 # shared fixtures
 
@@ -29,8 +30,11 @@ def make_db_task(status=TaskStatus.ESCALATION_PENDING, force_overlap=False):
 
 
 def make_user(calendar_token="fake-token"):
+    # approve_task builds a UserCalendarAdapter(user), which decrypts the token
+    # from google_oauth on construction, so give the mock a real encrypted token.
     user = MagicMock()
     user.calendar_token = calendar_token
+    user.google_oauth = {"access_token": encrypt_token(calendar_token)}
     return user
 
 

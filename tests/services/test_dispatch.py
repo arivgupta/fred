@@ -6,48 +6,54 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from services.dispatch import TOOL_REGISTRY, run_plan
+from utils.token_crypto import encrypt_token
 
 
 def _make_user():
-    # user with google_oauth set; dispatch injects user_id into params, not raw tokens
+    # user with an encrypted google_oauth token, as stored at rest. dispatch
+    # builds a per-user UserCalendarAdapter/UserGmailAdapter that decrypts it.
     u = MagicMock()
     u.id = uuid4()
-    u.google_oauth = {"access_token": "cal-tok"}
+    u.google_oauth = {"access_token": encrypt_token("cal-tok")}
     return u
 
 
-def test_calendar_step_injects_user_id():
+def test_calendar_step_routes_through_user_adapter():
+    # calendar steps build a per-user UserCalendarAdapter (which resolves the
+    # user's token internally) rather than passing a raw token through params.
     user = _make_user()
-    cal_mock = MagicMock()
-    cal_mock.execute.return_value = [{"id": "evt_1"}]
+    cal_adapter = MagicMock()
+    cal_adapter.execute.return_value = [{"id": "evt_1"}]
     plan = {
         "plan_steps": [
             {"tool": "calendar_tool", "params": {"operation": "read"}, "status": "PENDING"}
         ]
     }
 
-    with patch.dict(TOOL_REGISTRY, {"calendar_tool": cal_mock}):
+    with patch("services.dispatch.UserCalendarAdapter", return_value=cal_adapter) as ctor:
         results = run_plan(plan, user)
 
-    call_params = cal_mock.execute.call_args[0][0]
-    assert call_params["user_id"] == user.id  # dispatch injects user_id for DB token lookup
-    assert call_params["operation"] == "read"  # original params preserved
+    ctor.assert_called_once_with(user)  # adapter is scoped to the user
+    call_params = cal_adapter.execute.call_args[0][0]
+    assert call_params == {"operation": "read"}  # params passed through untouched
+    assert "access_token" not in call_params  # token never goes through params
     assert results[0]["status"] == "ok"
 
 
-def test_gmail_step_injects_user_id():
+def test_gmail_step_routes_through_user_adapter():
     user = _make_user()
-    gmail_mock = MagicMock()
+    gmail_adapter = MagicMock()
     plan = {
         "plan_steps": [
             {"tool": "gmail_tool", "params": {"operation": "read"}, "status": "PENDING"}
         ]
     }
 
-    with patch.dict(TOOL_REGISTRY, {"gmail_tool": gmail_mock}):
+    with patch("services.dispatch.UserGmailAdapter", return_value=gmail_adapter) as ctor:
         run_plan(plan, user)
 
-    assert gmail_mock.execute.call_args[0][0]["user_id"] == user.id
+    ctor.assert_called_once_with(user)
+    assert gmail_adapter.execute.call_args[0][0] == {"operation": "read"}
 
 
 def test_sms_step_no_token_injection():
@@ -68,22 +74,23 @@ def test_sms_step_no_token_injection():
     assert call_params == {"to": "+1", "body": "hi"}
 
 
-def test_missing_calendar_token_no_injection():
-    # if user has no google_oauth yet (oauth not done), user_id still injected; adapter raises
+def test_missing_calendar_token_errors_gracefully():
+    # if user has no google_oauth yet (oauth not done), the adapter raises a
+    # clear ValueError; dispatch must catch it and report a per-step error
+    # rather than letting the whole plan blow up.
     user = _make_user()
     user.google_oauth = None
-    cal_mock = MagicMock()
     plan = {
         "plan_steps": [
             {"tool": "calendar_tool", "params": {"operation": "read"}, "status": "PENDING"}
         ]
     }
 
-    with patch.dict(TOOL_REGISTRY, {"calendar_tool": cal_mock}):
-        run_plan(plan, user)
+    results = run_plan(plan, user)
 
-    assert "access_token" not in cal_mock.execute.call_args[0][0]
-    assert cal_mock.execute.call_args[0][0]["user_id"] == user.id  # user_id always injected
+    assert results[0]["tool"] == "calendar_tool"
+    assert results[0]["status"] == "error"
+    assert "calendar" in results[0]["error"].lower()
 
 
 def test_unknown_tool_skipped_not_raised():
@@ -113,8 +120,8 @@ def test_unknown_tool_skipped_not_raised():
 def test_tool_exception_caught_loop_continues():
     # one bad call (eg google 401) shouldn't kill remaining steps
     user = _make_user()
-    cal_mock = MagicMock()
-    cal_mock.execute.side_effect = RuntimeError("Google 401")
+    cal_adapter = MagicMock()
+    cal_adapter.execute.side_effect = RuntimeError("Google 401")
     sms_mock = MagicMock()
     plan = {
         "plan_steps": [
@@ -123,7 +130,8 @@ def test_tool_exception_caught_loop_continues():
         ]
     }
 
-    with patch.dict(TOOL_REGISTRY, {"calendar_tool": cal_mock, "sms_tool": sms_mock}):
+    with patch("services.dispatch.UserCalendarAdapter", return_value=cal_adapter), \
+         patch.dict(TOOL_REGISTRY, {"sms_tool": sms_mock}):
         results = run_plan(plan, user)
 
     assert results[0]["status"] == "error"
@@ -150,20 +158,22 @@ def test_empty_plan_steps_no_op():
 # dict is clean after run_plan returns."
 # [GenAI Use] LLM Response Start
 def test_caller_plan_not_mutated():
-    # injection happens on a copy -- access_token shouldn't leak back into
-    # the caller's plan dict (might get logged/persisted elsewhere later)
+    # dispatch copies params before handing them to the adapter, so nothing it
+    # adds (or that the adapter mutates) can leak back into the caller's plan
+    # dict, which might get logged/persisted elsewhere later.
     user = _make_user()
-    cal_mock = MagicMock()
+    cal_adapter = MagicMock()
+    cal_adapter.execute.side_effect = lambda params: params.update({"access_token": "leak"})
     plan = {
         "plan_steps": [
             {"tool": "calendar_tool", "params": {"operation": "read"}, "status": "PENDING"}
         ]
     }
 
-    with patch.dict(TOOL_REGISTRY, {"calendar_tool": cal_mock}):
+    with patch("services.dispatch.UserCalendarAdapter", return_value=cal_adapter):
         run_plan(plan, user)
 
-    assert "user_id" not in plan["plan_steps"][0]["params"]  # dispatch copies params, never mutates caller's dict
+    assert plan["plan_steps"][0]["params"] == {"operation": "read"}  # caller's dict untouched
 # [GenAI Use] LLM Response End
 # [GenAI Use] Reflection: this one i never would have thought to write. caught
 # it would matter when claude pointed out we log the full plan dict in webhook
@@ -325,8 +335,8 @@ def test_multiple_steps_in_order():
     # claude might say "read calendar then send sms" -- order matters
     user = _make_user()
     call_order = []
-    cal_mock = MagicMock()
-    cal_mock.execute.side_effect = lambda p, db=None: call_order.append("cal")
+    cal_adapter = MagicMock()
+    cal_adapter.execute.side_effect = lambda p: call_order.append("cal")
     sms_mock = MagicMock()
     sms_mock.execute.side_effect = lambda p: call_order.append("sms")
     plan = {
@@ -336,7 +346,8 @@ def test_multiple_steps_in_order():
         ]
     }
 
-    with patch.dict(TOOL_REGISTRY, {"calendar_tool": cal_mock, "sms_tool": sms_mock}):
+    with patch("services.dispatch.UserCalendarAdapter", return_value=cal_adapter), \
+         patch.dict(TOOL_REGISTRY, {"sms_tool": sms_mock}):
         run_plan(plan, user)
 
     assert call_order == ["cal", "sms"]

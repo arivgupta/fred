@@ -1,11 +1,16 @@
 from unittest.mock import MagicMock
 import pytest
 from backend.adapters.google.user_calendar_adapter import UserCalendarAdapter
+from backend.utils.token_crypto import encrypt_token
 
 
 def make_user(calendar_token="fake-token"):
+    # google_oauth stores tokens encrypted at rest, so the adapter decrypts on
+    # construction. Encrypt the fixture token the same way production does.
     user = MagicMock()
-    user.google_oauth = {"access_token": calendar_token} if calendar_token else None
+    user.google_oauth = (
+        {"access_token": encrypt_token(calendar_token)} if calendar_token else None
+    )
     return user
 
 
