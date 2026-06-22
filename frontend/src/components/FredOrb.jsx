@@ -22,6 +22,7 @@ export default function FredOrb({ size = 72, state = 'idle', glyph, className = 
       title={title}
     >
       <span className="fred-orb__ring" aria-hidden="true" />
+      <span className="fred-orb__sheen" aria-hidden="true" />
     </span>
   );
 }
