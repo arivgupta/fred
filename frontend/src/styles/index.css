@@ -94,103 +94,108 @@ button { font-family: inherit; }
 /* ============================================================================
    THE FRED ORB — FRED's living presence
    ========================================================================= */
-/* A fluid, iridescent "Siri"-style sphere: a glassy emerald core with two
-   layers of soft color blobs (emerald / teal / spring / mint) that slowly
-   drift, rotate and breathe past each other so the surface is always moving,
-   plus a rotating specular sweep for the glass read. Pure CSS, GPU-friendly
-   (only transform/opacity animate). No glyph — the mark is the orb itself. */
+/* Not a solid sphere — a soft, hazy, flowing field of green light (Notion /
+   Apple-Intelligence "noodling" vibe), in FRED's evergreen palette. Large orbs
+   render a real WebGL mesh gradient (@paper-design/shaders-react); small inline
+   orbs use this CSS haze. Both dissolve at the edges (no hard rim). The orb is
+   isolated so its inner blending never bleeds onto the page behind it. */
 .fred-orb {
   --orb: 72px;
   position: relative;
   width: var(--orb);
   height: var(--orb);
-  border-radius: 50%;
   flex-shrink: 0;
   isolation: isolate;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* glass sphere: top sheen + deep bottom core + base tint */
-  background:
-    radial-gradient(66% 58% at 30% 24%, rgba(240,255,248,0.9) 0%, rgba(240,255,248,0) 46%),
-    radial-gradient(135% 125% at 74% 100%, rgba(4,52,35,0.62) 0%, rgba(4,52,35,0) 56%),
-    linear-gradient(158deg, #12ac72 0%, #0a6c48 100%);
-  box-shadow:
-    inset 0 -12% 24% rgba(3,42,29,0.55),
-    inset 0 10% 20% rgba(232,255,243,0.5),
-    inset 9% 0 26% rgba(3,42,29,0.16),
-    0 12px 34px rgba(11,150,95,0.42);
+  /* emerald core gives the haze body, fading out at the edge */
+  background: radial-gradient(58% 58% at 50% 50%, rgba(22,196,140,0.62) 0%, rgba(22,196,140,0) 72%);
 }
-/* fluid layer 1 — warm-green blobs drifting one way */
+
+/* ── CSS haze (small orbs) — two clouds of soft color drifting past each other ── */
 .fred-orb::before {
   content: '';
   position: absolute;
-  inset: -3%;
-  border-radius: 50%;
+  inset: -8%;
   background:
-    radial-gradient(38% 34% at 32% 30%, rgba(180,255,216,0.95) 0%, rgba(180,255,216,0) 60%),
-    radial-gradient(42% 38% at 70% 36%, rgba(46,231,196,0.9) 0%, rgba(46,231,196,0) 62%),
-    radial-gradient(48% 44% at 60% 74%, rgba(22,200,120,0.85) 0%, rgba(22,200,120,0) 64%);
-  filter: blur(calc(var(--orb) * 0.045)) saturate(1.25);
+    radial-gradient(34% 32% at 34% 32%, rgba(186,255,220,0.95) 0%, rgba(186,255,220,0) 66%),
+    radial-gradient(40% 38% at 68% 34%, rgba(64,231,205,0.9)  0%, rgba(64,231,205,0)  66%),
+    radial-gradient(46% 44% at 60% 72%, rgba(24,205,150,0.92) 0%, rgba(24,205,150,0)  68%);
+  filter: blur(calc(var(--orb) * 0.11)) saturate(1.2);
   mix-blend-mode: screen;
   animation: orb-fluid 9s ease-in-out infinite;
   z-index: 1;
 }
-/* fluid layer 2 — teal/mint blobs + a bright specular, drifting the other way */
 .fred-orb__sheen {
   position: absolute;
-  inset: -3%;
-  border-radius: 50%;
+  inset: -8%;
   background:
-    radial-gradient(34% 30% at 70% 66%, rgba(120,255,184,0.85) 0%, rgba(120,255,184,0) 60%),
-    radial-gradient(40% 34% at 28% 64%, rgba(40,214,200,0.7) 0%, rgba(40,214,200,0) 62%),
-    radial-gradient(24% 20% at 36% 28%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 58%);
-  filter: blur(calc(var(--orb) * 0.04));
+    radial-gradient(32% 30% at 70% 64%, rgba(126,255,202,0.9) 0%, rgba(126,255,202,0) 64%),
+    radial-gradient(38% 34% at 28% 64%, rgba(46,224,216,0.82) 0%, rgba(46,224,216,0) 66%),
+    radial-gradient(28% 26% at 40% 30%, rgba(160,255,238,0.7) 0%, rgba(160,255,238,0) 62%);
+  filter: blur(calc(var(--orb) * 0.11));
   mix-blend-mode: screen;
   animation: orb-fluid-2 12s ease-in-out infinite;
   z-index: 2;
 }
-/* outer halo bloom (sits outside the sphere, drawn via the ring layer so it
-   isn't clipped by overflow) */
+
+/* ── WebGL mesh (large / hero orbs) — soft-masked so it dissolves into haze ── */
+.fred-orb--mesh::before { content: none; }   /* drop the CSS blobs */
+.fred-orb__mesh {
+  position: absolute;
+  inset: -4%;
+  border-radius: 50%;
+  overflow: hidden;
+  filter: saturate(1.22) brightness(1.08) blur(calc(var(--orb) * 0.012));
+  -webkit-mask: radial-gradient(closest-side, #000 44%, rgba(0,0,0,0.7) 72%, transparent 100%);
+          mask: radial-gradient(closest-side, #000 44%, rgba(0,0,0,0.7) 72%, transparent 100%);
+  animation: orb-breathe 6.5s ease-in-out infinite;
+  z-index: 1;
+}
+.fred-orb__mesh canvas { width: 100% !important; height: 100% !important; display: block; }
+
+/* ── outer bloom (both variants) ── */
 .fred-orb__ring {
   position: absolute;
-  inset: -34%;
+  inset: -30%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(54,224,170,0.4) 0%, rgba(20,184,126,0.16) 44%, transparent 70%);
-  filter: blur(8px);
+  background: radial-gradient(circle, rgba(46,224,182,0.42) 0%, rgba(18,176,124,0.16) 46%, transparent 72%);
+  filter: blur(calc(var(--orb) * 0.12));
   z-index: -2;
   animation: orb-breathe 5.5s ease-in-out infinite;
 }
 
 @keyframes orb-fluid {
-  0%, 100% { transform: rotate(0deg)   translate(0, 0)       scale(1); }
-  33%      { transform: rotate(42deg)  translate(4%, -3%)    scale(1.07); }
-  66%      { transform: rotate(-28deg) translate(-4%, 3%)    scale(1.03); }
+  0%, 100% { transform: rotate(0deg)   translate(0, 0)    scale(1); }
+  33%      { transform: rotate(44deg)  translate(6%, -4%) scale(1.1); }
+  66%      { transform: rotate(-30deg) translate(-5%, 4%) scale(1.04); }
 }
 @keyframes orb-fluid-2 {
-  0%, 100% { transform: rotate(0deg)   translate(0, 0)       scale(1.02); }
-  50%      { transform: rotate(-54deg) translate(3%, 4%)     scale(1.1); }
+  0%, 100% { transform: rotate(0deg)   translate(0, 0)    scale(1.03); }
+  50%      { transform: rotate(-58deg) translate(4%, 5%)  scale(1.12); }
 }
 @keyframes orb-swirl { to { transform: rotate(360deg); } }
 @keyframes orb-breathe {
-  0%, 100% { transform: scale(1);    opacity: 0.8; }
-  50%      { transform: scale(1.14); opacity: 1; }
+  0%, 100% { transform: scale(1);    opacity: 0.82; }
+  50%      { transform: scale(1.12); opacity: 1; }
 }
 
-/* states — the busier FRED is, the faster the surface churns */
-.fred-orb.is-idle::before          { animation-duration: 12s; }
-.fred-orb.is-idle .fred-orb__sheen { animation-duration: 15s; }
-.fred-orb.is-listening::before          { animation-duration: 4s; }
-.fred-orb.is-listening .fred-orb__sheen { animation-duration: 5s; }
-.fred-orb.is-thinking::before           { animation-duration: 2.6s; }
-.fred-orb.is-thinking .fred-orb__sheen  { animation-duration: 3.1s; }
-.fred-orb.is-working::before            { animation-duration: 1.5s; }
-.fred-orb.is-working .fred-orb__sheen   { animation-duration: 1.9s; }
-.fred-orb.is-speaking::before           { animation-duration: 3.2s; }
-.fred-orb.is-speaking .fred-orb__sheen  { animation-duration: 2.4s; }
+/* states — the busier FRED is, the faster the CSS haze churns
+   (the WebGL mesh varies speed via the `speed` prop in FredOrb.jsx) */
+.fred-orb.is-idle::before          { animation-duration: 13s; }
+.fred-orb.is-idle .fred-orb__sheen { animation-duration: 16s; }
+.fred-orb.is-listening::before          { animation-duration: 4.5s; }
+.fred-orb.is-listening .fred-orb__sheen { animation-duration: 5.5s; }
+.fred-orb.is-thinking::before           { animation-duration: 2.8s; }
+.fred-orb.is-thinking .fred-orb__sheen  { animation-duration: 3.3s; }
+.fred-orb.is-working::before            { animation-duration: 1.6s; }
+.fred-orb.is-working .fred-orb__sheen   { animation-duration: 2s; }
+.fred-orb.is-speaking::before           { animation-duration: 3.4s; }
+.fred-orb.is-speaking .fred-orb__sheen  { animation-duration: 2.6s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .fred-orb::before, .fred-orb__sheen, .fred-orb__ring { animation: none !important; }
+  .fred-orb::before, .fred-orb__sheen, .fred-orb__mesh, .fred-orb__ring { animation: none !important; }
 }
 
 /* ============================================================================
