@@ -103,11 +103,15 @@ export default function Conversations() {
 
   return (
     <div className="page">
-      <h1 className="page-title">Conversation History</h1>
+      <div className="page-header">
+        <div className="page-eyebrow">Activity</div>
+        <h1 className="page-title">Everything FRED has done</h1>
+        <p className="page-subtitle">Every call, text, and chat — grouped into sessions, in plain language.</p>
+      </div>
       {loading && <p className="task-empty">Loading…</p>}
       {!loading && error && <p className="error-msg">{error}</p>}
       {!loading && !error && messages.length === 0 && (
-        <p className="task-empty">No messages yet. Start a chat or text G.</p>
+        <p className="task-empty">No activity yet. Call FRED or start a chat.</p>
       )}
       <div className="history-list">
         {sessions.map((s) => {

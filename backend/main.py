@@ -50,9 +50,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="G",
-    description="parent's personal ai secretary -- backend",
-    version="0.1.0",
+    title="FRED",
+    description="FRED — the assistant you can actually call. Friendly, Resourceful, Everyday Deputy. (backend)",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -92,7 +92,7 @@ if os.getenv("DEBUG", "").lower() == "true":
 @app.get("/")
 def root() -> dict:
     #default cloud run service-url check
-    return {"service": "g-backend", "env": settings.APP_ENV, "status": "ok"}
+    return {"service": "fred-backend", "env": settings.APP_ENV, "status": "ok"}
 
 
 @app.get("/health")

@@ -271,11 +271,15 @@ export default function Profile() {
 
   return (
     <div className="page">
-      <h1 className="page-title">Profile & Preferences</h1>
+      <div className="page-header">
+        <div className="page-eyebrow">Memory & settings</div>
+        <h1 className="page-title">What FRED knows · how he behaves</h1>
+        <p className="page-subtitle">The people, places, and preferences FRED uses to act on your behalf. Read it, correct it, tune it.</p>
+      </div>
 
       {user.banner_dismissed !== true && (
         <Banner
-          message="G is active — text or call +1 (510) 945-3573 to get started."
+          message="FRED is online — call or text +1 (510) 945-3573 to get started."
           onDismiss={dismissBanner}
         />
       )}
@@ -344,7 +348,7 @@ export default function Profile() {
       {/* ─── Contacts ──────────────────────────────────── */}
       <section className="card">
         <h2 className="card-title">Contacts</h2>
-        <p className="card-description">People G may need to call — schools, doctors' offices, service providers.</p>
+        <p className="card-description">People FRED may need to call — schools, doctors' offices, service providers.</p>
         {contacts.length > 0 && (
           <ul className="member-list">
             {contacts.map((c) => (
@@ -399,7 +403,7 @@ export default function Profile() {
       {/* ─── Preferred Providers ───────────────────────── */}
       <section className="card">
         <h2 className="card-title">Preferred Providers</h2>
-        <p className="card-description">G uses these when booking appointments or making referrals.</p>
+        <p className="card-description">FRED uses these when booking appointments or making referrals.</p>
         {providers.length > 0 && (
           <ul className="member-list">
             {providers.map((p) => (
@@ -508,7 +512,7 @@ export default function Profile() {
         <h2 className="card-title">Notification Timing</h2>
 
         <div className="pref-row pref-row--block">
-          <span className="pref-label">Quiet hours — G won't contact you during this window</span>
+          <span className="pref-label">Quiet hours — FRED won't contact you during this window</span>
           <div className="time-range">
             <TimePicker
               label="From"
@@ -524,7 +528,7 @@ export default function Profile() {
         </div>
 
         <div className="pref-row pref-row--block">
-          <span className="pref-label">Keep-free window — G won't schedule tasks during this time</span>
+          <span className="pref-label">Keep-free window — FRED won't schedule tasks during this time</span>
           <div className="time-range">
             <TimePicker
               label="From"
@@ -540,7 +544,7 @@ export default function Profile() {
         </div>
 
         <div className="pref-row pref-row--block">
-          <span className="pref-label">Days G is active</span>
+          <span className="pref-label">Days FRED is active</span>
           <div className="day-picker">
             {DAYS.map((day) => (
               <button
@@ -660,7 +664,7 @@ export default function Profile() {
 
       {/* ─── G's Behavior ──────────────────────────────── */}
       <section className="card">
-        <h2 className="card-title">G's Behavior</h2>
+        <h2 className="card-title">FRED's Behavior</h2>
 
         <div className="pref-row">
           <span className="pref-label">Tone</span>
@@ -711,7 +715,7 @@ export default function Profile() {
         </div>
 
         <div className="pref-row pref-row--block">
-          <span className="pref-label">When G spots a scheduling conflict</span>
+          <span className="pref-label">When FRED spots a scheduling conflict</span>
           <div className="pref-choice">
             <button
               className={`choice-btn ${prefs.conflictHandling === 'suggest' ? 'active' : ''}`}

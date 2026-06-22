@@ -132,7 +132,7 @@ export default function Step1Family() {
 
       <section className="card">
         <h2 className="card-title">Family Members</h2>
-        <p className="card-description">G can coordinate tasks and reminders across your household.</p>
+        <p className="card-description">FRED can coordinate tasks and reminders across your household.</p>
         {members.map((m) => (
           <FamilyMemberRow
             key={m.id}

@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     #stt
     DEEPGRAM_API_KEY: str = ""
 
+    #web research / FRED's browser -- optional. when neither key is set the
+    #browser_tool degrades gracefully (returns an "unavailable" result instead
+    #of raising), so the rest of the agent loop keeps working.
+    #TAVILY is preferred (returns a synthesized answer + sources in one call);
+    #BRAVE is a fallback raw-results search. set either in the environment.
+    TAVILY_API_KEY: str = ""
+    BRAVE_API_KEY: str = ""
+
     #google api -- calendar + gmail oauth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""

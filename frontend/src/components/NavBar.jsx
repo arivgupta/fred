@@ -1,48 +1,40 @@
-import { NavLink, useNavigate} from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { isLoggedIn, clearUser } from '../auth';
+import FredOrb from './FredOrb';
 
-// [GenAI Use] LLM Response Start
-// NavBar with NAV_ITEMS, NavLink active class styling
-// [GenAI Use] LLM Response End
-// [GenAI Use] Reflection: Confirmed NavLink isActive callback works 
-// correctly. Consulted: https://reactrouter.com/en/main/components/nav-link#classname
-// Placeholder icons and brand name still need updating.
+const FRED_PHONE = '+1 (510) 945-3573';
+const FRED_TEL = '+15109453573';
 
-// [GenAI Use] LLM Response Start
-// Chat icon added between Tasks and History. Red badge shows count
-// of ESCALATION_PENDING tasks.
-// [GenAI Use] LLM Response End
-// [GenAI Use] Reflection: Badge count reads from TaskContext so it
-// updates in real time when a task status changes. Badge is hidden
-// when count is 0. Checked the chat nav item highlights correctly
-// when on the /chat route.
+const NAV_ITEMS = [
+  { to: '/today', label: 'Today', icon: '☀' },
+  { to: '/chat', label: 'Talk to FRED', icon: '💬' },
+  { to: '/tasks', label: 'Tasks', icon: '✓' },
+  { to: '/conversations', label: 'Activity', icon: '◷' },
+  { to: '/profile', label: 'Profile', icon: '⊙' },
+];
 
 export default function NavBar() {
   const loggedIn = isLoggedIn();
   const navigate = useNavigate();
-  const NAV_ITEMS = [
-    { to: '/tasks', label: 'Tasks', icon: '✓' },
-    { to: '/chat', label: 'Chat', icon: '💬' },
-    { to: '/conversations', label: 'History', icon: '◎' },
-    { to: '/profile', label: 'Profile', icon: '⊙' },
-  ];
 
-  // adding this to ensure state update
-  function handleAuth(){
-    if (loggedIn){
+  function handleAuth() {
+    if (loggedIn) {
       clearUser();
-      navigate('/signin')
-    }
-    else{
-      navigate('/signup')
+      navigate('/');
+    } else {
+      navigate('/signup');
     }
   }
 
   return (
     <nav className="navbar">
-      <div className="navbar-brand">G</div>
+      <NavLink to="/" className="navbar-brand">
+        <FredOrb size={34} state="idle" />
+        <span>FRED</span>
+      </NavLink>
+
       <ul className="navbar-links">
-        {NAV_ITEMS.map(({ to, label, icon, badge }) => (
+        {NAV_ITEMS.map(({ to, label, icon }) => (
           <li key={to}>
             <NavLink
               to={to}
@@ -50,11 +42,13 @@ export default function NavBar() {
             >
               <span className="nav-icon">{icon}</span>
               <span className="nav-label">{label}</span>
-              {badge > 0 && <span className="nav-badge">{badge}</span>}
             </NavLink>
           </li>
         ))}
       </ul>
+
+      <a className="navbar-cta" href={`tel:${FRED_TEL}`}>📞 Call FRED</a>
+      <p className="navbar-phone"><b>{FRED_PHONE}</b></p>
       <button className="navbar-signup" onClick={handleAuth}>
         {loggedIn ? 'Sign Out' : 'Sign Up'}
       </button>

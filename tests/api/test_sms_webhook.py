@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from main import app
 from database import get_db
 from models.datatypes import TaskStatus
+from utils.token_crypto import encrypt_token
 
 
 FAKE_PLAN = {
@@ -29,9 +30,13 @@ def _client():
 
 
 def _user():
+    # the webhook builds a UserCalendarAdapter(user) for the tool registry, which
+    # decrypts google_oauth["access_token"] on construction — give it a real
+    # encrypted token so that step doesn't blow up before the escalation path.
     u = MagicMock()
     u.id = "user-uuid-123"
     u.calendar_token = "fake-cal-token"
+    u.google_oauth = {"access_token": encrypt_token("fake-cal-token")}
     return u
 
 

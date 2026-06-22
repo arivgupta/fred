@@ -20,10 +20,13 @@ import { useTasks } from '../context/TaskContext';
 // goes through context so it persists. Verified the badge count in
 // NavBar drops when an escalation is approved or denied.
 
+// Status hues stay readable and distinct, but anchor to FRED's green family:
+// teal for in-flight, emerald for done. Amber/red/grey keep their universal
+// "waiting / needs you / stalled" meaning.
 const STATUS_COLORS = {
-  PENDING: '#f59e0b',
-  IN_PROGRESS: '#3b5bdb',
-  ESCALATION_PENDING: '#ef4444',
+  PENDING: '#d6892f',
+  IN_PROGRESS: '#0d9488',
+  ESCALATION_PENDING: '#e2574c',
   COMPLETED: '#10b981',
   FAILED: '#6b7280',
 };

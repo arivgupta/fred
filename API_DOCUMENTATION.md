@@ -1,8 +1,8 @@
-# G — API Documentation
+# FRED — API Documentation
 
-G is a personal AI secretary for busy parents. Parents reach G through three channels — a web chat UI, SMS, and voice phone calls — and G can set reminders, read and update Google Calendar, read Gmail, send texts, call the parent back, and even place outbound calls to businesses on the parent's behalf. This document is the complete reference for G's HTTP API: the REST endpoints the frontend uses, the Twilio webhooks that drive SMS and voice, the request/response schemas, and the shared enums.
+FRED (Friendly, Resourceful, Everyday Deputy) is a personal AI assistant you can call. People reach FRED through three channels — a web chat UI, SMS, and voice phone calls — and FRED can set reminders, read and update Google Calendar, read Gmail, send texts, call you back, place outbound calls to businesses on your behalf, and **browse the open web** to research and get things done. This document is the complete reference for FRED's HTTP API: the REST endpoints the frontend uses, the Twilio webhooks that drive SMS and voice, the request/response schemas, and the shared enums.
 
-- **Service name:** `g-backend`
+- **Service name:** `fred-backend`
 - **Framework:** FastAPI (Python)
 - **API version:** `0.1.0`
 - **Interactive docs:** when the server is running, FastAPI serves auto-generated docs at `/docs` (Swagger UI) and `/redoc`.
@@ -130,7 +130,7 @@ Returns a small service banner. Used by Cloud Run / Railway service-URL checks.
 
 **200 response**
 ```json
-{ "service": "g-backend", "env": "development", "status": "ok" }
+{ "service": "fred-backend", "env": "development", "status": "ok" }
 ```
 
 ### GET `/health`
@@ -447,7 +447,7 @@ Claude returns a structured plan with a `task_type` (one of `reminder`, `calenda
 - **A schedulable step with `scheduled_at`** (`sms_tool`, `call_tool`, or `business_call_tool` with a future time) → routed through the dispatch/Celery path, which creates the task row and fires the SMS/call at the scheduled time.
 - **Immediate steps** → run inline through the TaskRunner. Calendar conflicts pause the task into `ESCALATION_PENDING` (returned as `escalated: true`); the parent approves or denies via the task endpoints below.
 
-The tools available to the agent are `sms_tool`, `call_tool`, `business_call_tool`, `calendar_tool`, and `gmail_tool` (see [Tools](#tools-enum)).
+The tools available to the agent are `sms_tool`, `call_tool`, `business_call_tool`, `calendar_tool`, `gmail_tool`, and `browser_tool` (see [Tools](#tools-enum)).
 
 **Error handling:** The endpoint is resilient — if Claude or a tool fails, it still returns `200` with a fallback `reply` (e.g. "I ran into a problem completing that. Please try again.") rather than surfacing a `500`.
 
@@ -702,6 +702,7 @@ Tool names G's planner can put in `plan_steps`.
 | `calendar_delete_tool` | Delete a calendar event |
 | `script_tool` | (reserved) |
 | `gmail_tool` | Read Gmail |
+| `browser_tool` | FRED's browser — research the open web (`query`) or read a page (`url`). Read-only and safe; no confirmation needed. Requires `TAVILY_API_KEY` or `BRAVE_API_KEY`, degrades gracefully otherwise |
 
 ### TaskStatus
 `PENDING`, `IN_PROGRESS`, `ESCALATION_PENDING`, `COMPLETED`, `FAILED`.

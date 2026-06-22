@@ -29,6 +29,7 @@ from adapters.communication.call_tool import OutboundCallTool
 from adapters.communication.sms_tool import SMSTool
 from adapters.google.calendar_tool import CalendarTool
 from adapters.google.gmail_tool import GmailTool
+from adapters.web.browser_tool import BrowserTool
 from models.datatypes import TaskType
 from models.user import User
 from services.notifications import notify_user
@@ -48,6 +49,9 @@ TOOL_REGISTRY: dict[str, Any] = {
     "call_tool": OutboundCallTool(),
     "calendar_tool": CalendarTool(),
     "gmail_tool": GmailTool(),
+    # FRED's browser — read-only web research, no user token needed, so it can
+    # live in the shared registry and run inline through the else-branch below.
+    "browser_tool": BrowserTool(),
 }
 
 
