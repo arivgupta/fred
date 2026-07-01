@@ -677,7 +677,9 @@
   max-width: var(--content-max);
   margin: 0 auto;
   padding: 30px 30px 72px;
-  animation: rise-in var(--t-slow) both;
+  /* `backwards` (not `both`): a retained transform would make .page the
+     containing block for position:fixed children like the settings savebar. */
+  animation: rise-in var(--t-slow) backwards;
 }
 
 .page-head {

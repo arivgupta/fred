@@ -225,7 +225,20 @@
   border-radius: var(--r-full);
   box-shadow: var(--shadow-pop);
   z-index: 80;
-  animation: rise-in var(--t-med) both;
+  /* Dedicated keyframes: generic rise-in would clobber the centering
+     transform above. */
+  animation: savebar-in var(--t-med) backwards;
+}
+
+@keyframes savebar-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-50% + (var(--sidebar-w) / 2))) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(calc(-50% + (var(--sidebar-w) / 2))) translateY(0);
+  }
 }
 
 .savebar__msg {
@@ -253,5 +266,6 @@
     transform: none;
     bottom: calc(var(--tabbar-h) + 14px);
     justify-content: space-between;
+    animation-name: rise-in;
   }
 }
