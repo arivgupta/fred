@@ -1,0 +1,112 @@
+/* ═══ History (conversations) page ═══════════════════════════ */
+
+.history-filters {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.history-group {
+  margin-bottom: 8px;
+}
+
+.session {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  margin-bottom: 12px;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  animation: rise-in var(--t-med) both;
+}
+
+.session--open {
+  box-shadow: var(--shadow-card);
+}
+
+.session__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 18px;
+  text-align: left;
+  transition: background var(--t-fast);
+}
+
+.session__head:hover {
+  background: var(--surface-2);
+}
+
+.session__channel {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.session__channel--chat {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.session__channel--sms {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.session__channel--voice {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.session__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.session__preview {
+  font-size: var(--text-base);
+  font-weight: 550;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session__sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+}
+
+.session__chevron {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  transition: transform var(--t-med);
+}
+
+.session--open .session__chevron {
+  transform: rotate(180deg);
+}
+
+.session__body {
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: 18px;
+  animation: fade-in var(--t-med) both;
+}
+
+.session__thread {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+}

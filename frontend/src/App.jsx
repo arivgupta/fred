@@ -1,59 +1,73 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import NavBar from './components/NavBar';
-import { TaskProvider } from './context/TaskContext';
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
+import AppShell from './components/AppShell';
+import { TasksProvider } from './context/TasksContext';
+import { ToastProvider } from './context/ToastContext';
 import { isLoggedIn } from './auth';
-import Profile from './pages/Profile';
-import Conversations from './pages/Conversations';
-import Tasks from './pages/Tasks';
+import Home from './pages/Home';
 import Chat from './pages/Chat';
-import Register from './pages/Register';
-import SignUp from './pages/SignUp';
+import Tasks from './pages/Tasks';
+import History from './pages/History';
+import Settings from './pages/Settings';
 import SignIn from './pages/SignIn';
+import SignUp from './pages/SignUp';
+import OAuthCallback from './pages/OAuthCallback';
 import Step1Family from './pages/Onboard/Step1Family';
 import Step2Preferences from './pages/Onboard/Step2Preferences';
-import OAuthCallback from './pages/OAuthCallback';
-
-const NO_NAV_PATHS = ['/signup', '/signin', '/onboard'];
+import NotFound from './pages/NotFound';
 
 function RequireAuth({ children }) {
   const { pathname } = useLocation();
-  if (!isLoggedIn()) return <Navigate to={`/signin?next=${encodeURIComponent(pathname)}`} replace />;
+  if (!isLoggedIn()) {
+    return <Navigate to={`/signin?next=${encodeURIComponent(pathname)}`} replace />;
+  }
   return children;
-}
-
-function AppContent() {
-  const { pathname } = useLocation();
-  const hideNav = NO_NAV_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
-  const isChatPage = pathname === '/chat';
-
-  return (
-    <div className={hideNav ? '' : 'app-layout'}>
-      {!hideNav && <NavBar />}
-      <main className={hideNav ? '' : `main-content${isChatPage ? ' main-content--chat' : ''}`}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/tasks" replace />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/onboard/step1" element={<RequireAuth><Step1Family /></RequireAuth>} />
-          <Route path="/onboard/step2" element={<RequireAuth><Step2Preferences /></RequireAuth>} />
-          <Route path="/oauth/callback" element={<OAuthCallback />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/conversations" element={<Conversations />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
-      </main>
-    </div>
-  );
 }
 
 export default function App() {
   return (
-    <TaskProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
-    </TaskProvider>
+    <ToastProvider>
+      <TasksProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Standalone screens (no shell) */}
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
+            {/* Legacy path from the first prototype — keep old links alive */}
+            <Route path="/register" element={<Navigate to="/signup" replace />} />
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
+            <Route
+              path="/onboard/step1"
+              element={<RequireAuth><Step1Family /></RequireAuth>}
+            />
+            <Route
+              path="/onboard/step2"
+              element={<RequireAuth><Step2Preferences /></RequireAuth>}
+            />
+
+            {/* Main app inside the shell */}
+            <Route element={<AppShell />}>
+              <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
+              <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
+              <Route path="/tasks" element={<RequireAuth><Tasks /></RequireAuth>} />
+              <Route
+                path="/conversations"
+                element={<RequireAuth><History /></RequireAuth>}
+              />
+              <Route
+                path="/profile"
+                element={<RequireAuth><Settings /></RequireAuth>}
+              />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </TasksProvider>
+    </ToastProvider>
   );
 }

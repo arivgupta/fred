@@ -1,0 +1,157 @@
+/* ─────────────────────────────────────────────────────────────
+   Design tokens — "Warm Concierge" design language.
+   Light theme is default; [data-theme="dark"] overrides.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* Type */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia,
+    serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas,
+    monospace;
+
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+
+  /* Radii */
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-full: 999px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.25, 0.8, 0.35, 1);
+  --t-fast: 130ms var(--ease);
+  --t-med: 200ms var(--ease);
+  --t-slow: 320ms var(--ease);
+
+  /* Layout */
+  --sidebar-w: 248px;
+  --content-max: 880px;
+  --tabbar-h: 62px;
+
+  /* Brand gradient (shared across themes) */
+  --brand-grad: linear-gradient(135deg, #8b7cff 0%, #5a50e0 52%, #3d7bf0 125%);
+  --brand-grad-soft: linear-gradient(
+    135deg,
+    rgba(139, 124, 255, 0.16),
+    rgba(90, 80, 224, 0.1) 52%,
+    rgba(61, 123, 240, 0.14)
+  );
+
+  color-scheme: light;
+
+  /* ── Light palette ─────────────────────────────────────────── */
+  --bg: #f6f4f0;
+  --bg-raised: #fbfaf8;
+  --surface: #ffffff;
+  --surface-2: #faf8f5;
+  --surface-3: #f2efeb;
+
+  --ink: #211e1b;
+  --ink-2: #5c574f;
+  --ink-3: #8f887d;
+  --ink-faint: #b6afa4;
+
+  --line: #e9e5df;
+  --line-strong: #d9d4cb;
+
+  --accent: #5a50e0;
+  --accent-strong: #4a41c8;
+  --accent-ink: #4a41c8;
+  --on-accent: #ffffff;
+  --accent-soft: rgba(90, 80, 224, 0.1);
+  --accent-softer: rgba(90, 80, 224, 0.055);
+  --accent-ring: rgba(90, 80, 224, 0.28);
+
+  --success: #157a4c;
+  --success-soft: #e2f3ea;
+  --info: #2160c4;
+  --info-soft: #e5eefb;
+  --warn: #96650a;
+  --warn-soft: #faf0da;
+  --danger: #c03540;
+  --danger-strong: #a92933;
+  --danger-soft: #fbe9ea;
+  --attention: #c14e0e;
+  --attention-soft: #fcede1;
+
+  --shadow-sm: 0 1px 2px rgba(33, 30, 27, 0.05);
+  --shadow-card: 0 1px 2px rgba(33, 30, 27, 0.04),
+    0 10px 28px -18px rgba(33, 30, 27, 0.18);
+  --shadow-pop: 0 2px 6px rgba(33, 30, 27, 0.07),
+    0 20px 44px -20px rgba(33, 30, 27, 0.28);
+  --shadow-accent: 0 8px 20px -8px rgba(90, 80, 224, 0.5);
+
+  --scrim: rgba(33, 30, 27, 0.4);
+
+  /* Chat bubbles */
+  --bubble-user: var(--accent);
+  --bubble-user-ink: #ffffff;
+  --bubble-g: #ffffff;
+  --bubble-g-ink: var(--ink);
+  --bubble-g-line: var(--line);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #141216;
+  --bg-raised: #18161c;
+  --surface: #1e1b23;
+  --surface-2: #242129;
+  --surface-3: #2b2731;
+
+  --ink: #f0edea;
+  --ink-2: #b3aca3;
+  --ink-3: #837c72;
+  --ink-faint: #5f594f;
+
+  --line: rgba(240, 237, 234, 0.09);
+  --line-strong: rgba(240, 237, 234, 0.17);
+
+  --accent: #8d84ff;
+  --accent-strong: #a29aff;
+  --accent-ink: #aaa3ff;
+  --on-accent: #17151d;
+  --accent-soft: rgba(141, 132, 255, 0.14);
+  --accent-softer: rgba(141, 132, 255, 0.08);
+  --accent-ring: rgba(141, 132, 255, 0.34);
+
+  --success: #52c58a;
+  --success-soft: rgba(82, 197, 138, 0.13);
+  --info: #6ba1f2;
+  --info-soft: rgba(107, 161, 242, 0.13);
+  --warn: #e0b154;
+  --warn-soft: rgba(224, 177, 84, 0.12);
+  --danger: #ef6d76;
+  --danger-strong: #f2858d;
+  --danger-soft: rgba(239, 109, 118, 0.12);
+  --attention: #f08c4e;
+  --attention-soft: rgba(240, 140, 78, 0.12);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25),
+    0 12px 32px -18px rgba(0, 0, 0, 0.55);
+  --shadow-pop: 0 2px 8px rgba(0, 0, 0, 0.35),
+    0 24px 48px -20px rgba(0, 0, 0, 0.6);
+  --shadow-accent: 0 8px 22px -8px rgba(141, 132, 255, 0.35);
+
+  --scrim: rgba(0, 0, 0, 0.55);
+
+  --bubble-user: #6c62e8;
+  --bubble-user-ink: #ffffff;
+  --bubble-g: #26232c;
+  --bubble-g-ink: var(--ink);
+  --bubble-g-line: rgba(240, 237, 234, 0.08);
+}

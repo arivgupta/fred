@@ -1,0 +1,257 @@
+/* ═══ Settings (profile) page ════════════════════════════════ */
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-nav__link {
+  padding: 7px 11px;
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  font-weight: 550;
+  color: var(--ink-3);
+  text-decoration: none !important;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+
+.settings-nav__link:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+.settings-nav__link.active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 650;
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.settings-card {
+  scroll-margin-top: 22px;
+}
+
+@media (max-width: 900px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .settings-nav {
+    display: none;
+  }
+}
+
+/* ── Info rows ───────────────────────────────────────────────── */
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.info-cell {
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  min-width: 0;
+}
+
+.info-cell__label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  margin-bottom: 3px;
+}
+
+.info-cell__value {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ── People rows (family / contacts / providers) ─────────────── */
+
+.people-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+.person-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px;
+}
+
+.person-row + .person-row {
+  border-top: 1px solid var(--line);
+}
+
+.person-row__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.person-row__name {
+  display: block;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.person-row__sub {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.person-row__remove {
+  flex-shrink: 0;
+  padding: 7px;
+  border-radius: var(--r-xs);
+  color: var(--ink-faint);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+
+.person-row__remove:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.add-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.add-row .btn {
+  align-self: stretch;
+}
+
+/* ── Preference rows ─────────────────────────────────────────── */
+
+.pref-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 13px 0;
+}
+
+.pref-row + .pref-row,
+.switch-row + .pref-row,
+.pref-row + .switch-row {
+  border-top: 1px solid var(--line);
+}
+
+.pref-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.pref-row__label {
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+
+.pref-row__sub {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--ink-3);
+  margin-top: 1px;
+}
+
+.time-range {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.time-range .field {
+  flex: 1;
+  min-width: 130px;
+  max-width: 190px;
+}
+
+@media (max-width: 640px) {
+  .pref-row:not(.pref-row--stack) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+/* ── Sticky save bar ─────────────────────────────────────────── */
+
+.savebar {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(calc(-50% + (var(--sidebar-w) / 2)));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px 10px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-full);
+  box-shadow: var(--shadow-pop);
+  z-index: 80;
+  animation: rise-in var(--t-med) both;
+}
+
+.savebar__msg {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.savebar__msg .status-dot {
+  color: var(--warn);
+}
+
+.savebar__actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .savebar {
+    left: 16px;
+    right: 16px;
+    transform: none;
+    bottom: calc(var(--tabbar-h) + 14px);
+    justify-content: space-between;
+  }
+}

@@ -1,15 +1,12 @@
-// ---- App.jsx ----
-// [GenAI Use] LLM Response Start
-// Replaced existing stub with full BrowserRouter layout
-// [GenAI Use] LLM Response End
-// [GenAI Use] Reflection: Verified route paths match backend.
-// Consulted React Router docs on Navigate/redirect behavior:
-// https://reactrouter.com/en/main/components/navigate
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { getTheme } from './theme';
 import './styles/index.css';
+
+// Belt-and-braces: index.html sets data-theme pre-paint; re-assert here in
+// case the inline script was stripped by an intermediary.
+document.documentElement.dataset.theme = getTheme();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
