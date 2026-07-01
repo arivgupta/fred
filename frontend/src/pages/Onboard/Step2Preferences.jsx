@@ -1,25 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isLoggedIn, getUser, setUser } from '../../auth';
-import { updatePreferences, fetchUser } from '../../api';
-import ProgressBar from '../../components/ProgressBar';
-import Toggle from '../../components/Toggle';
-import TimePicker from '../../components/TimePicker';
+import { fetchUser, updatePreferences } from '../../api';
+import { getUser, setUser } from '../../auth';
+import Icon from '../../components/Icon';
+import OnboardLayout from '../../components/OnboardLayout';
+import {
+  PillGroup,
+  Segmented,
+  Switch,
+  TimeField,
+} from '../../components/controls';
+import { useToast } from '../../context/ToastContext';
 
-// [GenAI Use] Prompt: "Step2Preferences used to merge step1 localStorage
-// data with prefs and write it all to g_user, clobbering the backend user
-// (with its real id). Drop the g_onboard guard, drop the overwrite. On
-// Activate, PATCH /api/users/{id}/preferences with the backend-shape
-// payload (snake_case fields, mapped enums), then GET /api/users/{id} and
-// store the result. Navigate to /tasks. Map the digest content options
-// to the backend's DigestContent enum -- the third option (`+ Emails +
-// Tasks`) is collapsed to `calendar+tasks` until the backend learns the
-// triple combo."
-// [GenAI Use] LLM Response Start
-
-// Backend DigestContent enum only has 'calendar', 'calendar+email',
-// 'calendar+tasks' -- no triple combo. Frontend triple-option label is
-// kept for UI continuity; we map it to 'calendar+tasks' at send time.
 const DIGEST_OPTS = [
   { value: 'calendar', label: 'Calendar only' },
   { value: 'calendar+email', label: '+ Emails' },
@@ -46,37 +38,27 @@ const DEFAULT_PREFS = {
   morningDigest: false,
   digestTime: '07:00',
   digestContent: 'calendar',
-  digestTravelTime: false,
-  keepFreeStart: '',
-  keepFreeEnd: '',
   quietHoursStart: '22:00',
   quietHoursEnd: '07:00',
+  keepFreeStart: '',
+  keepFreeEnd: '',
   reminderLeadTime: '30',
   autoApproveLowRisk: false,
   escalationTimeoutMinutes: 30,
-  activeDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
-  callUrgencyThreshold: 'high',
-  maxReminders: 3,
-  conflictHandling: 'suggest',
 };
 
-// Map frontend prefs (camelCase, UI shape) to the backend's
-// UserPreferencesUpdate payload (snake_case, enum values). Backend silently
-// ignores unknown keys, but we keep the mapping explicit so a wrong key
-// is caught here, not server-side.
+// Map UI state → backend UserPreferencesUpdate (snake_case, enum values).
 function toBackendPrefs(p) {
-  const payload = {};
-
-  if (p.communicationStyle) payload.comm_style = p.communicationStyle;
-  if (p.preferredContact) {
-    // frontend uses 'text'; backend enum is 'sms'.
-    payload.preferred_channel = p.preferredContact === 'text' ? 'sms' : 'call';
-  }
-  if (p.callUrgencyThreshold) payload.call_urgency_threshold = p.callUrgencyThreshold;
-
-  // wrap the form's start/end pair into the JSONB list shape the backend
-  // expects ({start_time, end_time}) so the notify_user quiet-hours check
-  // can read it without a converter.
+  const payload = {
+    comm_style: p.communicationStyle,
+    preferred_channel: p.preferredContact === 'text' ? 'sms' : 'call',
+    tone: p.tone,
+    morning_digest_enabled: p.morningDigest,
+    morning_digest_time: p.digestTime,
+    morning_digest_content: p.digestContent,
+    auto_approve_low_risk: p.autoApproveLowRisk,
+    escalation_timeout_minutes: p.escalationTimeoutMinutes,
+  };
   if (p.quietHoursStart && p.quietHoursEnd) {
     payload.blocked_windows = [
       { start_time: p.quietHoursStart, end_time: p.quietHoursEnd },
@@ -87,41 +69,17 @@ function toBackendPrefs(p) {
       { start_time: p.keepFreeStart, end_time: p.keepFreeEnd },
     ];
   }
-  if (Array.isArray(p.activeDays)) payload.active_days = p.activeDays;
-
-  if (typeof p.morningDigest === 'boolean') payload.morning_digest_enabled = p.morningDigest;
-  if (p.digestTime) payload.morning_digest_time = p.digestTime;
-  if (p.digestContent) payload.morning_digest_content = p.digestContent;
-  if (typeof p.digestTravelTime === 'boolean') payload.morning_digest_travel_time = p.digestTravelTime;
-
-  if (Number.isFinite(p.escalationTimeoutMinutes)) {
-    payload.escalation_timeout_minutes = p.escalationTimeoutMinutes;
-  }
-  if (typeof p.autoApproveLowRisk === 'boolean') payload.auto_approve_low_risk = p.autoApproveLowRisk;
-  if (Number.isFinite(p.maxReminders)) payload.max_reminders = p.maxReminders;
-
-  if (p.tone) payload.tone = p.tone;
-  // reminderLeadTime is a string of minutes in the UI; backend wants int.
-  if (p.reminderLeadTime) {
-    const n = parseInt(p.reminderLeadTime, 10);
-    if (Number.isFinite(n)) payload.reminder_lead_time_minutes = n;
-  }
-  if (p.conflictHandling) payload.conflict_handling = p.conflictHandling;
-
+  const lead = parseInt(p.reminderLeadTime, 10);
+  if (Number.isFinite(lead)) payload.reminder_lead_time_minutes = lead;
   return payload;
 }
 
 export default function Step2Preferences() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      navigate('/signin?next=/onboard/step2', { replace: true });
-    }
-  }, [navigate]);
 
   function setPref(key, val) {
     setPrefs((p) => ({ ...p, [key]: val }));
@@ -132,20 +90,17 @@ export default function Step2Preferences() {
     setSubmitError('');
     const user = getUser();
     if (!user?.id) {
-      setSubmitError('Session expired -- please sign in again.');
+      setSubmitError('Session expired — please sign in again.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const payload = toBackendPrefs(prefs);
-      if (Object.keys(payload).length > 0) {
-        await updatePreferences(user.id, payload);
-      }
-      // refresh canonical user state so downstream pages see the saved prefs.
+      await updatePreferences(user.id, toBackendPrefs(prefs));
       const refreshed = await fetchUser(user.id);
-      setUser({ ...refreshed, bannerDismissed: false });
-      navigate('/tasks');
+      setUser(refreshed);
+      toast('G is set up and ready. Welcome!', { type: 'success' });
+      navigate('/');
     } catch (err) {
       setSubmitError(err.message || 'Could not save preferences. Please try again.');
     } finally {
@@ -154,126 +109,184 @@ export default function Step2Preferences() {
   }
 
   return (
-    <div className="onboard-page">
-      <ProgressBar current={2} total={2} />
-      <h1 className="onboard-title">Your preferences</h1>
-
-      {/* Communication */}
-      <section className="card">
-        <h2 className="card-title">Communication</h2>
-
-        <div className="pref-row">
-          <span className="pref-label">Style</span>
-          <div className="pref-choice">
-            <button className={`choice-btn ${prefs.communicationStyle === 'brief' ? 'active' : ''}`} onClick={() => setPref('communicationStyle', 'brief')}>Brief</button>
-            <button className={`choice-btn ${prefs.communicationStyle === 'detailed' ? 'active' : ''}`} onClick={() => setPref('communicationStyle', 'detailed')}>Detailed</button>
+    <OnboardLayout
+      step={2}
+      title="How should G work for you?"
+      sub="Sensible defaults are pre-selected — everything can be changed later in Settings."
+    >
+      <div className="onboard__cards">
+        <section className="card card--pad">
+          <h2 className="card__title">
+            <Icon name="chat" size={16} />
+            Communication
+          </h2>
+          <div className="pref-row">
+            <span className="pref-row__label">Message style</span>
+            <Segmented
+              ariaLabel="Message style"
+              value={prefs.communicationStyle}
+              onChange={(v) => setPref('communicationStyle', v)}
+              options={[
+                { value: 'brief', label: 'Brief' },
+                { value: 'detailed', label: 'Detailed' },
+              ]}
+            />
           </div>
-        </div>
-
-        <div className="pref-row">
-          <span className="pref-label">Method</span>
-          <div className="pref-choice">
-            <button className={`choice-btn ${prefs.preferredContact === 'text' ? 'active' : ''}`} onClick={() => setPref('preferredContact', 'text')}>Text</button>
-            <button className={`choice-btn ${prefs.preferredContact === 'call' ? 'active' : ''}`} onClick={() => setPref('preferredContact', 'call')}>Call</button>
+          <div className="pref-row">
+            <span className="pref-row__label">Reach you by</span>
+            <Segmented
+              ariaLabel="Preferred contact method"
+              value={prefs.preferredContact}
+              onChange={(v) => setPref('preferredContact', v)}
+              options={[
+                { value: 'text', label: 'Text' },
+                { value: 'call', label: 'Call' },
+              ]}
+            />
           </div>
-        </div>
-
-        <div className="pref-row">
-          <span className="pref-label">Tone</span>
-          <div className="pref-choice">
-            <button className={`choice-btn ${prefs.tone === 'formal' ? 'active' : ''}`} onClick={() => setPref('tone', 'formal')}>Formal</button>
-            <button className={`choice-btn ${prefs.tone === 'casual' ? 'active' : ''}`} onClick={() => setPref('tone', 'casual')}>Casual</button>
+          <div className="pref-row">
+            <span className="pref-row__label">Tone</span>
+            <Segmented
+              ariaLabel="Tone"
+              value={prefs.tone}
+              onChange={(v) => setPref('tone', v)}
+              options={[
+                { value: 'casual', label: 'Casual' },
+                { value: 'formal', label: 'Formal' },
+              ]}
+            />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Morning Digest */}
-      <section className="card">
-        <h2 className="card-title">Morning Digest</h2>
-
-        <Toggle label="Send morning digest" checked={prefs.morningDigest} onChange={(v) => setPref('morningDigest', v)} />
-
-        {prefs.morningDigest && (
-          <>
-            <div className="pref-row">
-              <span className="pref-label">Time</span>
-              <TimePicker label="" value={prefs.digestTime} onChange={(v) => setPref('digestTime', v)} />
-            </div>
-            <div className="pref-row pref-row--block">
-              <span className="pref-label">Include</span>
-              <div className="pill-options">
-                {DIGEST_OPTS.map((o) => (
-                  <button key={o.value} className={`pill-btn ${prefs.digestContent === o.value ? 'active' : ''}`} onClick={() => setPref('digestContent', o.value)}>{o.label}</button>
-                ))}
+        <section className="card card--pad">
+          <h2 className="card__title">
+            <Icon name="sun" size={16} />
+            Morning digest
+          </h2>
+          <Switch
+            label="Send a morning digest"
+            sub="A short brief on your day, delivered by text."
+            checked={prefs.morningDigest}
+            onChange={(v) => setPref('morningDigest', v)}
+          />
+          {prefs.morningDigest && (
+            <>
+              <div className="pref-row">
+                <span className="pref-row__label">Deliver at</span>
+                <TimeField
+                  value={prefs.digestTime}
+                  onChange={(v) => setPref('digestTime', v)}
+                />
               </div>
+              <div className="pref-row pref-row--stack">
+                <span className="pref-row__label">Include</span>
+                <PillGroup
+                  ariaLabel="Digest contents"
+                  value={prefs.digestContent}
+                  onChange={(v) => setPref('digestContent', v)}
+                  options={DIGEST_OPTS}
+                />
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="card card--pad">
+          <h2 className="card__title">
+            <Icon name="clock" size={16} />
+            Timing
+          </h2>
+          <div className="pref-row pref-row--stack">
+            <span className="pref-row__label">
+              Quiet hours
+              <span className="pref-row__sub">G won’t contact you in this window.</span>
+            </span>
+            <div className="time-range">
+              <TimeField
+                label="From"
+                value={prefs.quietHoursStart}
+                onChange={(v) => setPref('quietHoursStart', v)}
+              />
+              <TimeField
+                label="To"
+                value={prefs.quietHoursEnd}
+                onChange={(v) => setPref('quietHoursEnd', v)}
+              />
             </div>
-          </>
+          </div>
+          <div className="pref-row pref-row--stack">
+            <span className="pref-row__label">
+              Keep-free window
+              <span className="pref-row__sub">G won’t schedule anything here.</span>
+            </span>
+            <div className="time-range">
+              <TimeField
+                label="From"
+                value={prefs.keepFreeStart}
+                onChange={(v) => setPref('keepFreeStart', v)}
+              />
+              <TimeField
+                label="To"
+                value={prefs.keepFreeEnd}
+                onChange={(v) => setPref('keepFreeEnd', v)}
+              />
+            </div>
+          </div>
+          <div className="pref-row pref-row--stack">
+            <span className="pref-row__label">Remind you ahead by</span>
+            <PillGroup
+              ariaLabel="Reminder lead time"
+              value={prefs.reminderLeadTime}
+              onChange={(v) => setPref('reminderLeadTime', v)}
+              options={REMINDER_OPTS}
+            />
+          </div>
+        </section>
+
+        <section className="card card--pad">
+          <h2 className="card__title">
+            <Icon name="shield" size={16} />
+            Approvals
+          </h2>
+          <Switch
+            label="Auto-approve low-risk actions"
+            sub="Adding calendar events, for example. Deletions always ask first."
+            checked={prefs.autoApproveLowRisk}
+            onChange={(v) => setPref('autoApproveLowRisk', v)}
+          />
+          <div className="pref-row pref-row--stack">
+            <span className="pref-row__label">
+              Approval timeout
+              <span className="pref-row__sub">
+                How long G waits for your OK before pausing a task.
+              </span>
+            </span>
+            <PillGroup
+              ariaLabel="Escalation timeout"
+              value={prefs.escalationTimeoutMinutes}
+              onChange={(v) => setPref('escalationTimeoutMinutes', v)}
+              options={ESCALATION_OPTS}
+            />
+          </div>
+        </section>
+      </div>
+
+      <div className="onboard__footer">
+        {submitError && (
+          <span className="field__error">
+            <Icon name="alert-circle" size={13} />
+            {submitError}
+          </span>
         )}
-      </section>
-
-      {/* Timing */}
-      <section className="card">
-        <h2 className="card-title">Timing</h2>
-
-        <div className="pref-row pref-row--block">
-          <span className="pref-label">Keep-free window</span>
-          <div className="time-range">
-            <TimePicker label="From" value={prefs.keepFreeStart} onChange={(v) => setPref('keepFreeStart', v)} />
-            <TimePicker label="To" value={prefs.keepFreeEnd} onChange={(v) => setPref('keepFreeEnd', v)} />
-          </div>
-        </div>
-
-        <div className="pref-row pref-row--block">
-          <span className="pref-label">Quiet hours</span>
-          <div className="time-range">
-            <TimePicker label="From" value={prefs.quietHoursStart} onChange={(v) => setPref('quietHoursStart', v)} />
-            <TimePicker label="To" value={prefs.quietHoursEnd} onChange={(v) => setPref('quietHoursEnd', v)} />
-          </div>
-        </div>
-
-        <div className="pref-row pref-row--block">
-          <span className="pref-label">Reminder lead time</span>
-          <div className="pill-options">
-            {REMINDER_OPTS.map((o) => (
-              <button key={o.value} className={`pill-btn ${prefs.reminderLeadTime === o.value ? 'active' : ''}`} onClick={() => setPref('reminderLeadTime', o.value)}>{o.label}</button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Escalation */}
-      <section className="card">
-        <h2 className="card-title">Escalation</h2>
-
-        <Toggle label="Auto-approve low-risk actions" checked={prefs.autoApproveLowRisk} onChange={(v) => setPref('autoApproveLowRisk', v)} />
-
-        <div className="pref-row pref-row--block">
-          <span className="pref-label">Escalation timeout</span>
-          <div className="pill-options">
-            {ESCALATION_OPTS.map((o) => (
-              <button key={o.value} className={`pill-btn ${prefs.escalationTimeoutMinutes === o.value ? 'active' : ''}`} onClick={() => setPref('escalationTimeoutMinutes', o.value)}>{o.label}</button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="onboard-footer">
-        {submitError && <span className="error-msg">{submitError}</span>}
         <button
-          className="btn btn-brand"
+          className="btn btn--primary btn--lg"
           onClick={handleActivate}
           disabled={submitting}
         >
           {submitting ? 'Activating…' : 'Activate G'}
+          {!submitting && <Icon name="sparkles" size={15} />}
         </button>
       </div>
-      {/* [GenAI Use] LLM Response End */}
-      {/* [GenAI Use] Reflection: kept the partial-success behavior of
-          PATCH /preferences -- if some fields fail backend validation,
-          others still save. The refresh via fetchUser pulls whatever the
-          server actually accepted so the UI doesn't show a delta from
-          reality. Skipped Promise.all between the patch and refresh
-          because the refresh has to see the patched state. */}
-    </div>
+    </OnboardLayout>
   );
 }

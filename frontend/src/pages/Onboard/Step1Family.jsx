@@ -1,20 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { isLoggedIn, getUser, setUser } from '../../auth';
-import { updateProfile, createFamilyMember, fetchUser } from '../../api';
-import ProgressBar from '../../components/ProgressBar';
-import FamilyMemberRow from '../../components/FamilyMemberRow';
+import { createFamilyMember, fetchUser, updateProfile } from '../../api';
+import { getUser, setUser } from '../../auth';
+import Icon from '../../components/Icon';
+import OnboardLayout from '../../components/OnboardLayout';
+import { TextField } from '../../components/controls';
 
-// [GenAI Use] Prompt: "Step1Family used to gate on a localStorage key
-// (g_onboard) that the new password-signup flow doesn't set, so users
-// bounced back to /signup -> /tasks and skipped onboarding entirely.
-// Drop the g_onboard guard; the backend user from signup is already in
-// localStorage as g_user. On Continue, PATCH /api/users/{id} with the
-// phone (first-time set) and any name change, then POST each family
-// member to /api/users/{id}/family-members. Refresh the local g_user
-// from the backend before navigating to step 2 so subsequent screens
-// see the canonical state."
-// [GenAI Use] LLM Response Start
+const RELATIONS = ['Child', 'Spouse', 'Parent', 'Sibling', 'Other'];
 
 export default function Step1Family() {
   const navigate = useNavigate();
@@ -26,16 +18,10 @@ export default function Step1Family() {
   const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
-    if (!isLoggedIn()) {
-      navigate('/signin?next=/onboard/step1', { replace: true });
-      return;
-    }
-    // hydrate name from the backend user we got at signup; phone is blank
-    // because register() doesn't take a phone yet -- user fills it here.
     const u = getUser();
     if (u?.name) setName(u.name);
     if (u?.phone_number) setPhone(u.phone_number);
-  }, [navigate]);
+  }, []);
 
   function addMember() {
     setMembers((ms) => [
@@ -44,8 +30,8 @@ export default function Step1Family() {
     ]);
   }
 
-  function updateMember(id, updated) {
-    setMembers((ms) => ms.map((m) => (m.id === id ? updated : m)));
+  function updateMember(id, patch) {
+    setMembers((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
   }
 
   function removeMember(id) {
@@ -55,30 +41,32 @@ export default function Step1Family() {
   async function handleContinue() {
     if (submitting) return;
     const errs = {};
-    if (!name.trim()) errs.name = 'Name is required';
-    if (!phone.trim()) errs.phone = 'Phone number is required';
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (!name.trim()) errs.name = 'Your name is required';
+    if (!phone.trim()) errs.phone = 'A phone number is required — it’s how G texts you';
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
 
     setErrors({});
     setSubmitError('');
     setSubmitting(true);
     try {
       const user = getUser();
-      if (!user?.id) throw new Error('Session expired -- please sign in again.');
+      if (!user?.id) throw new Error('Session expired — please sign in again.');
 
-      // 1. update profile (name + phone). backend ignores no-op fields.
-      const profilePatch = {};
-      if (name.trim() !== user.name) profilePatch.name = name.trim();
+      // 1. Profile patch (name + first-time phone). Backend ignores no-ops.
+      const patch = {};
+      if (name.trim() !== user.name) patch.name = name.trim();
       if (phone.trim() && phone.trim() !== user.phone_number) {
-        profilePatch.phone_number = phone.trim();
+        patch.phone_number = phone.trim();
       }
-      if (Object.keys(profilePatch).length > 0) {
-        await updateProfile(user.id, profilePatch);
+      if (Object.keys(patch).length > 0) {
+        await updateProfile(user.id, patch);
       }
 
-      // 2. POST each family member with a non-empty name. one at a time
-      // since the row count is tiny and per-row errors are easier to
-      // surface than a bulk failure.
+      // 2. Create each named family member. Sequential on purpose — if one
+      //    row 422s, everything before it is already persisted.
       const valid = members.filter((m) => m.name.trim());
       for (const m of valid) {
         await createFamilyMember(user.id, {
@@ -88,80 +76,124 @@ export default function Step1Family() {
         });
       }
 
-      // 3. pull canonical user state back into localStorage so step 2
-      // (and Profile, eventually) reads the updated record.
+      // 3. Refresh the canonical user snapshot for later screens.
       const refreshed = await fetchUser(user.id);
       setUser(refreshed);
 
       navigate('/onboard/step2');
     } catch (err) {
-      setSubmitError(err.message || 'Could not save profile. Please try again.');
+      setSubmitError(err.message || 'Could not save. Please try again.');
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="onboard-page">
-      <ProgressBar current={1} total={2} />
-      <h1 className="onboard-title">Set up your family</h1>
+    <OnboardLayout
+      step={1}
+      title="Tell G about your household"
+      sub="G uses your number to text and call you, and knows your family by name so “pick up Emma” just works."
+    >
+      <div className="onboard__cards">
+        <section className="card card--pad">
+          <h2 className="card__title">
+            <Icon name="user" size={16} />
+            About you
+          </h2>
+          <div className="onboard__cards" style={{ gap: 14 }}>
+            <TextField
+              label="Your name"
+              placeholder="Full name"
+              value={name}
+              error={errors.name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setErrors((p) => ({ ...p, name: '' }));
+              }}
+            />
+            <TextField
+              label="Mobile number"
+              type="tel"
+              placeholder="+1 555 000 0000"
+              hint="G texts reminders and updates to this number."
+              value={phone}
+              error={errors.phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setErrors((p) => ({ ...p, phone: '' }));
+              }}
+            />
+          </div>
+        </section>
 
-      <section className="card">
-        <h2 className="card-title">Your Info</h2>
-        <div className="field-group">
-          <label className="field-label">Your Name *</label>
-          <input
-            className={`text-input${errors.name ? ' input-error' : ''}`}
-            placeholder="Full name"
-            value={name}
-            onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: '' })); }}
-          />
-          {errors.name && <span className="error-msg">{errors.name}</span>}
-        </div>
-        <div className="field-group" style={{ marginTop: 12 }}>
-          <label className="field-label">Phone Number *</label>
-          <input
-            className={`text-input${errors.phone ? ' input-error' : ''}`}
-            placeholder="+1 555 000 0000"
-            value={phone}
-            onChange={(e) => { setPhone(e.target.value); setErrors((p) => ({ ...p, phone: '' })); }}
-          />
-          {errors.phone && <span className="error-msg">{errors.phone}</span>}
-        </div>
-      </section>
+        <section className="card card--pad">
+          <h2 className="card__title">
+            <Icon name="users" size={16} />
+            Family members
+          </h2>
+          <p className="card__desc">
+            Optional, but it lets G coordinate pickups, appointments, and
+            reminders for everyone.
+          </p>
+          {members.map((m) => (
+            <div key={m.id} className="member-editor">
+              <input
+                className="input"
+                placeholder="Name"
+                value={m.name}
+                onChange={(e) => updateMember(m.id, { name: e.target.value })}
+              />
+              <select
+                className="select"
+                value={m.relation}
+                onChange={(e) => updateMember(m.id, { relation: e.target.value })}
+              >
+                <option value="">Relation</option>
+                {RELATIONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+              <input
+                type="tel"
+                className="input"
+                placeholder="Phone (optional)"
+                value={m.phone_number}
+                onChange={(e) =>
+                  updateMember(m.id, { phone_number: e.target.value })
+                }
+              />
+              <button
+                className="person-row__remove"
+                onClick={() => removeMember(m.id)}
+                aria-label="Remove family member"
+              >
+                <Icon name="trash" size={15} />
+              </button>
+            </div>
+          ))}
+          <button className="add-dashed" onClick={addMember}>
+            <Icon name="plus" size={14} />
+            Add family member
+          </button>
+        </section>
+      </div>
 
-      <section className="card">
-        <h2 className="card-title">Family Members</h2>
-        <p className="card-description">G can coordinate tasks and reminders across your household.</p>
-        {members.map((m) => (
-          <FamilyMemberRow
-            key={m.id}
-            member={m}
-            onChange={(updated) => updateMember(m.id, updated)}
-            onRemove={() => removeMember(m.id)}
-          />
-        ))}
-        <button className="btn-add-member" onClick={addMember}>+ Add family member</button>
-      </section>
-
-      <div className="onboard-footer">
-        {submitError && <span className="error-msg">{submitError}</span>}
+      <div className="onboard__footer">
+        {submitError && (
+          <span className="field__error">
+            <Icon name="alert-circle" size={13} />
+            {submitError}
+          </span>
+        )}
         <button
-          className="btn btn-brand"
+          className="btn btn--primary btn--lg"
           onClick={handleContinue}
           disabled={submitting}
         >
-          {submitting ? 'Saving…' : 'Continue →'}
+          {submitting ? 'Saving…' : 'Continue'}
+          {!submitting && <Icon name="arrow-right" size={15} />}
         </button>
       </div>
-    </div>
+    </OnboardLayout>
   );
 }
-// [GenAI Use] LLM Response End
-// [GenAI Use] Reflection: kept the per-row POST loop sequential rather
-// than Promise.all because if one row fails with a 422 (e.g. a missing
-// name) we want everything before it persisted, not an indeterminate
-// in-flight state. The user has to retry the same screen anyway and the
-// duplicate-name check is the backend's problem, not ours. Decided not
-// to roll back successfully-created members on a later failure -- the
-// Profile page (when wired) will let the user remove any duds.

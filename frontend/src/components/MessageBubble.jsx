@@ -1,29 +1,20 @@
-function formatTime(ts) {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+import Avatar from './Avatar';
+import { formatTime } from '../lib/format';
 
-// [GenAI Use] LLM Response Start
-// Chat bubble with inbound/outbound direction, channel, badge
-// [GenAI Use] LLM Response End
-// [GenAI Use] Reflection: Verified direction string matches mock data.
-// Consulted toLocaleTimeString for timestamp formatting:
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleTimeString
-
+// Read-only bubble for the History page. Inbound = the parent (right),
+// outbound = G (left) — matches the live chat orientation.
 export default function MessageBubble({ message }) {
-  const { direction, channel, content, timestamp, taskCreated } = message;
-  const isUser = direction === 'inbound';
-
+  const isUser = message.direction === 'inbound';
   return (
-    <div className={`bubble-row ${isUser ? 'bubble-row--user' : 'bubble-row--g'}`}>
-      {!isUser && <div className="bubble-avatar">G</div>}
-      <div className="bubble-body">
-        <div className={`bubble ${isUser ? 'bubble--user' : 'bubble--g'}`}>
-          <span>{content}</span>
-          {taskCreated && <span className="task-badge">Task created</span>}
-        </div>
-        <div className="bubble-meta">
-          {formatTime(timestamp)} · {channel.toUpperCase()}
-        </div>
+    <div className={`msg ${isUser ? 'msg--user' : 'msg--g'}`}>
+      {!isUser && (
+        <span className="msg__avatar-slot">
+          <Avatar brand size={30} />
+        </span>
+      )}
+      <div className="msg__body">
+        <div className="msg__bubble">{message.content}</div>
+        <span className="msg__meta">{formatTime(message.timestamp)}</span>
       </div>
     </div>
   );

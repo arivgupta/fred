@@ -1,123 +1,222 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { sendChatMessage } from '../api';
-import { getUser } from '../auth';
-import TypingIndicator from '../components/TypingIndicator';
-import SuggestionPills from '../components/SuggestionPills';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { getMessages, sendChatMessage } from '../api';
+import { useAuthUser } from '../hooks';
+import { useTasks } from '../context/TasksContext';
+import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
+import Skeleton from '../components/Skeleton';
+import { formatDayLabel, formatTime, isSameDay } from '../lib/format';
 
-// [GenAI Use] Prompt: "Chat.jsx used to talk directly to the Anthropic
-// API from the browser, parse <task> XML out of the response, and stash
-// the parsed task in a localStorage-backed TaskContext. Replace with a
-// single POST to /api/users/{id}/chat -- backend runs the same
-// conversation pipeline as real SMS (logs inbound + outbound rows with
-// channel='sms', runs Claude, dispatches plan_steps, returns
-// {reply, tasks_created}). Drop XML parsing, drop TaskContext, drop
-// the sidebar. Messages live in component state only -- leaving the
-// page wipes the screen, but the conversation is persisted in the DB
-// and surfaces on the History page; any task created via dispatch
-// shows up on the Tasks page."
-// [GenAI Use] LLM Response Start
+const SUGGESTIONS = [
+  { icon: 'bell', text: 'Remind me to pick up Emma from soccer at 4pm' },
+  { icon: 'calendar', text: 'What’s on my calendar tomorrow?' },
+  { icon: 'phone', text: 'Call me in 30 minutes to leave for practice' },
+  { icon: 'mail', text: 'Any important emails this morning?' },
+];
 
-function formatTime(ts) {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+// Messages sent within this window by the same author render grouped.
+const GROUP_WINDOW_MS = 3 * 60 * 1000;
+
+function TypingIndicator() {
+  return (
+    <div className="msg msg--g">
+      <span className="msg__avatar-slot">
+        <Avatar brand size={30} />
+      </span>
+      <div className="typing" aria-label="G is typing">
+        <span className="typing__dot" />
+        <span className="typing__dot" />
+        <span className="typing__dot" />
+      </div>
+    </div>
+  );
 }
 
-function ChatMessage({ msg }) {
+function MessageRow({ msg, prev }) {
   const isUser = msg.role === 'user';
+  const grouped =
+    prev &&
+    prev.role === msg.role &&
+    msg.timestamp - prev.timestamp < GROUP_WINDOW_MS;
+
   return (
-    <div className={`chat-msg-row${isUser ? ' chat-msg-row--user' : ''}`}>
-      {!isUser && <div className="chat-avatar">G</div>}
-      <div className="chat-msg-body">
-        <div className={`chat-bubble${isUser ? ' chat-bubble--user' : ' chat-bubble--g'}`}>
-          <span>{msg.content}</span>
-        </div>
-        <div className="chat-msg-time">{formatTime(msg.timestamp)}</div>
+    <div
+      className={`msg ${isUser ? 'msg--user' : 'msg--g'}${grouped ? ' msg--compact' : ''}`}
+    >
+      {!isUser && (
+        <span className="msg__avatar-slot">
+          {!grouped ? <Avatar brand size={30} /> : null}
+        </span>
+      )}
+      <div className="msg__body">
+        <div className="msg__bubble">{msg.content}</div>
+        {msg.taskCreated && (
+          <Link to="/tasks" className="msg__task-chip">
+            <Icon name="check-circle" size={12} strokeWidth={2.3} />
+            Task created — track it
+          </Link>
+        )}
+        {msg.escalated && (
+          <Link to="/tasks" className="msg__task-chip msg__task-chip--attention">
+            <Icon name="shield" size={12} strokeWidth={2.3} />
+            Needs your approval
+          </Link>
+        )}
+        {!grouped && (
+          <span className="msg__meta">{formatTime(msg.timestamp)}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HistorySkeleton() {
+  return (
+    <div className="chat__thread" aria-hidden="true">
+      <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+        <Skeleton width={30} height={30} radius="50%" />
+        <Skeleton width="46%" height={40} radius={16} />
+      </div>
+      <div style={{ display: 'flex', gap: 9, marginTop: 12, flexDirection: 'row-reverse' }}>
+        <Skeleton width="38%" height={40} radius={16} />
+      </div>
+      <div style={{ display: 'flex', gap: 9, marginTop: 12 }}>
+        <Skeleton width={30} height={30} radius="50%" />
+        <Skeleton width="54%" height={56} radius={16} />
       </div>
     </div>
   );
 }
 
 export default function Chat() {
-  const navigate = useNavigate();
-  const [userId, setUserId] = useState(null);
+  const user = useAuthUser();
+  const location = useLocation();
+  const { refresh: refreshTasks } = useTasks();
+
   const [messages, setMessages] = useState([]);
+  const [hydrating, setHydrating] = useState(true);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
-  // count of tasks created this session, used to show a small banner
-  // pointing the user at /tasks. doesn't track ids -- they're persisted
-  // on the backend and the Tasks page is the source of truth.
   const [tasksCreatedCount, setTasksCreatedCount] = useState(0);
-  const messagesEndRef = useRef(null);
+
+  const scrollRef = useRef(null);
+  const endRef = useRef(null);
   const textareaRef = useRef(null);
+  const prefillDone = useRef(false);
 
+  // Hydrate the persisted web-chat thread so the conversation survives
+  // navigation and reloads (messages are logged server-side with
+  // channel="chat").
   useEffect(() => {
-    const u = getUser();
-    if (!u?.id) {
-      navigate('/signin?next=/chat', { replace: true });
-      return;
+    if (!user?.id) {
+      setHydrating(false);
+      return undefined;
     }
-    setUserId(u.id);
-  }, [navigate]);
+    let cancelled = false;
+    getMessages(user.id, 200)
+      .then((rows) => {
+        if (cancelled) return;
+        const chat = rows
+          .filter((m) => m.channel === 'chat')
+          .reverse()
+          .map((m) => ({
+            id: m.id,
+            role: m.direction === 'inbound' ? 'user' : 'assistant',
+            content: m.content,
+            timestamp: Date.parse(m.timestamp),
+          }));
+        setMessages(chat);
+      })
+      .catch(() => {
+        /* fresh thread is fine */
+      })
+      .finally(() => {
+        if (!cancelled) setHydrating(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  // Prefill handed over from the Home "Ask G" card.
+  useEffect(() => {
+    const prefill = location.state?.prefill;
+    if (prefill && !prefillDone.current) {
+      prefillDone.current = true;
+      setInput(prefill);
+      textareaRef.current?.focus();
+    }
+  }, [location.state]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, typing]);
 
-  const send = useCallback(async (text) => {
-    const trimmed = text.trim();
-    if (!trimmed || typing || !userId) return;
+  const send = useCallback(
+    async (text) => {
+      const trimmed = (text ?? '').trim();
+      if (!trimmed || typing || !user?.id) return;
 
-    const userMsg = {
-      id: `msg-${Date.now()}`,
-      role: 'user',
-      content: trimmed,
-      timestamp: Date.now(),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    setInput('');
-    setTyping(true);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-
-    try {
-      // Pass the in-session message history so the backend can use it
-      // as fallback Claude context when the user isn't logged in. When
-      // logged in the backend pulls history from the DB and ignores
-      // this; we send it either way to keep the contract uniform.
-      const history = [...messages, userMsg].map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-      const { reply, tasks_created } = await sendChatMessage(userId, trimmed, history);
-
-      const assistantMsg = {
-        id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: reply,
+      const userMsg = {
+        id: `local-${Date.now()}`,
+        role: 'user',
+        content: trimmed,
         timestamp: Date.now(),
       };
-      setMessages((prev) => [...prev, assistantMsg]);
 
-      if (Array.isArray(tasks_created) && tasks_created.length > 0) {
-        setTasksCreatedCount((c) => c + tasks_created.length);
+      setMessages((prev) => [...prev, userMsg]);
+      setInput('');
+      setTyping(true);
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+      try {
+        const history = [...messages, userMsg].map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+        const { reply, tasks_created, escalated } = await sendChatMessage(
+          user.id,
+          trimmed,
+          history
+        );
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `local-${Date.now() + 1}`,
+            role: 'assistant',
+            content: reply,
+            timestamp: Date.now(),
+            taskCreated: tasks_created.length > 0 && !escalated,
+            escalated,
+          },
+        ]);
+
+        if (tasks_created.length > 0 || escalated) {
+          setTasksCreatedCount((c) => c + Math.max(tasks_created.length, 1));
+          refreshTasks({ silent: true });
+        }
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `local-${Date.now() + 1}`,
+            role: 'assistant',
+            content:
+              err.message && !err.message.startsWith('Request failed')
+                ? err.message
+                : 'Sorry — I had trouble reaching the server. Try again?',
+            timestamp: Date.now(),
+            isError: true,
+          },
+        ]);
+      } finally {
+        setTyping(false);
       }
-    } catch (err) {
-      const errMsg = {
-        id: `msg-${Date.now() + 1}`,
-        role: 'assistant',
-        content: err.message?.startsWith('HTTP')
-          ? "Sorry, I had trouble reaching the server. Try again?"
-          : err.message || "Sorry, something went wrong. Try again?",
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errMsg]);
-    } finally {
-      setTyping(false);
-    }
-  }, [messages, typing, userId]);
+    },
+    [messages, typing, user?.id, refreshTasks]
+  );
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -130,76 +229,114 @@ export default function Chat() {
     setInput(e.target.value);
     const ta = e.target;
     ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+    ta.style.height = Math.min(ta.scrollHeight, 132) + 'px';
   }
 
-  return (
-    <div className="chat-page">
-      <div className="chat-panel">
-        <div className="chat-header">
-          <div className="chat-header-avatar">G</div>
-          <div className="chat-header-info">
-            <h2>G</h2>
-            <p>Your AI secretary</p>
-          </div>
-        </div>
+  // Interleave day dividers.
+  const timeline = useMemo(() => {
+    const items = [];
+    messages.forEach((m, i) => {
+      const prev = messages[i - 1];
+      if (!prev || !isSameDay(prev.timestamp, m.timestamp)) {
+        items.push({ kind: 'day', id: `day-${m.id}`, ts: m.timestamp });
+      }
+      items.push({ kind: 'msg', id: m.id, msg: m, prev });
+    });
+    return items;
+  }, [messages]);
 
-        {tasksCreatedCount > 0 && (
-          <div className="chat-banner">
-            <span className="chat-banner-icon" aria-hidden="true">✓</span>
-            <span className="chat-banner-text">
-              {tasksCreatedCount} task{tasksCreatedCount === 1 ? '' : 's'} added this session
-            </span>
-            <Link to="/tasks" className="chat-banner-link">
-              View dashboard →
-            </Link>
+  const empty = !hydrating && messages.length === 0;
+
+  return (
+    <div className="chat">
+      <header className="chat__header">
+        <Avatar brand size={36} />
+        <div className="chat__header-info">
+          <h1>G</h1>
+          <span className="chat__header-status">
+            <span className="status-dot status-dot--live" />
+            Online — replies in seconds
+          </span>
+        </div>
+      </header>
+
+      {tasksCreatedCount > 0 && (
+        <div className="chat__banner">
+          <Icon name="check-circle" size={14} strokeWidth={2.2} />
+          <span>
+            {tasksCreatedCount} task{tasksCreatedCount === 1 ? '' : 's'} created
+            this session
+          </span>
+          <Link to="/tasks">View tasks →</Link>
+        </div>
+      )}
+
+      <div className="chat__scroll" ref={scrollRef}>
+        {hydrating ? (
+          <HistorySkeleton />
+        ) : empty ? (
+          <div className="chat-hello">
+            <div className="chat-hello__orb">G</div>
+            <h2 className="chat-hello__title">What can I take off your plate?</h2>
+            <p className="chat-hello__sub">
+              Reminders, scheduling, phone calls, calendar questions — just ask
+              like you’d ask a person.
+            </p>
+            <div className="chat-hello__grid">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s.text}
+                  className="chat-hello__card"
+                  onClick={() => send(s.text)}
+                >
+                  <Icon name={s.icon} size={17} />
+                  {s.text}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="chat__thread">
+            {timeline.map((item) =>
+              item.kind === 'day' ? (
+                <div key={item.id} className="chat__day-divider">
+                  {formatDayLabel(item.ts)}
+                </div>
+              ) : (
+                <MessageRow key={item.id} msg={item.msg} prev={item.prev} />
+              )
+            )}
+            {typing && <TypingIndicator />}
+            <div ref={endRef} />
           </div>
         )}
+      </div>
 
-        <div className="chat-messages">
-          {messages.length === 0 ? (
-            <SuggestionPills onSelect={send} />
-          ) : (
-            <>
-              {messages.map((msg) => (
-                <ChatMessage key={msg.id} msg={msg} />
-              ))}
-              {typing && <TypingIndicator />}
-              <div ref={messagesEndRef} />
-            </>
-          )}
-        </div>
-
-        <div className="chat-input-bar">
+      <div className="chat__composer">
+        <div className="composer">
           <textarea
             ref={textareaRef}
-            className="chat-input"
+            className="composer__input"
             placeholder="Message G…"
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             rows={1}
-            disabled={typing}
+            aria-label="Message G"
           />
           <button
-            className="chat-send-btn"
+            className="composer__send"
             onClick={() => send(input)}
             disabled={!input.trim() || typing}
-            aria-label="Send"
+            aria-label="Send message"
           >
-            ↑
+            <Icon name="arrow-up" size={18} strokeWidth={2.3} />
           </button>
         </div>
+        <p className="chat__hint">
+          Enter to send · Shift+Enter for a new line
+        </p>
       </div>
     </div>
   );
 }
-// [GenAI Use] LLM Response End
-// [GenAI Use] Reflection: dropped the TaskSidebar entirely instead of
-// fetching tasks_created by ID on each send. The sidebar was a
-// nice-to-have UX nicety; with the Tasks page now real-DB-backed,
-// a single line "N tasks added" banner pointing at /tasks gives the
-// user the same information at much lower implementation cost. If we
-// want richer per-task previews in the sidebar later, fetch
-// getTasks(userId) once and filter by tasks_created IDs -- the data
-// is all there.

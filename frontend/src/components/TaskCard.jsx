@@ -1,127 +1,187 @@
-import { useState, useEffect } from 'react';
-import { approveEscalation, denyEscalation } from '../api';
-import { useTasks } from '../context/TaskContext';
+import { useState } from 'react';
+import Icon from './Icon';
+import StatusChip from './StatusChip';
+import { useNow } from '../hooks';
+import { useTasks } from '../context/TasksContext';
+import { useToast } from '../context/ToastContext';
+import { countdown, formatDateTime } from '../lib/format';
+import { STATUS_META, stepDetail, toolMeta } from '../lib/tasks';
 
-// [GenAI Use] LLM Response Start
-// STATUS_COLORS/LABELS maps, formatDate, useCountdown hook,
-// approve/deny escalation buttons
-// [GenAI Use] LLM Response End
-// [GenAI Use] Reflection: Verified countdown math (30 * 60 * 1000ms).
-// Consulted setInterval cleanup docs to confirm no memory leak:
-// https://developer.mozilla.org/en-US/docs/Web/API/setInterval
-// Confirmed api.js mock functions match expected signature.
-
-// [GenAI Use] LLM Response Start UPDATE
-// Approve/Deny now calls updateTask() so status change saves to
-// context and localStorage.
-// [GenAI Use] LLM Response End
-// [GenAI Use] Reflection: Before this change, approve/deny only
-// updated local state so the change was lost on navigation. Now it
-// goes through context so it persists. Verified the badge count in
-// NavBar drops when an escalation is approved or denied.
-
-const STATUS_COLORS = {
-  PENDING: '#f59e0b',
-  IN_PROGRESS: '#3b5bdb',
-  ESCALATION_PENDING: '#ef4444',
-  COMPLETED: '#10b981',
-  FAILED: '#6b7280',
+const STATUS_ORB = {
+  PENDING: { bg: 'var(--warn-soft)', fg: 'var(--warn)' },
+  IN_PROGRESS: { bg: 'var(--info-soft)', fg: 'var(--info)' },
+  ESCALATION_PENDING: { bg: 'var(--attention-soft)', fg: 'var(--attention)' },
+  COMPLETED: { bg: 'var(--success-soft)', fg: 'var(--success)' },
+  FAILED: { bg: 'var(--danger-soft)', fg: 'var(--danger)' },
+  MISSED: { bg: 'var(--danger-soft)', fg: 'var(--danger)' },
 };
 
-const STATUS_LABELS = {
-  PENDING: 'Pending',
-  IN_PROGRESS: 'In Progress',
-  ESCALATION_PENDING: 'Needs Approval',
-  COMPLETED: 'Completed',
-  FAILED: 'Failed',
-};
-
-function formatDate(ts) {
-  return new Date(ts).toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-// 30-minute countdown from escalationCreatedAt
-function useCountdown(targetIso) {
-  const getRemaining = () => {
-    const end = new Date(targetIso).getTime() + 30 * 60 * 1000;
-    return Math.max(0, end - Date.now());
-  };
-
-  const [remaining, setRemaining] = useState(getRemaining);
-
-  useEffect(() => {
-    const id = setInterval(() => setRemaining(getRemaining()), 1000);
-    return () => clearInterval(id);
-  }, [targetIso]);
-
-  if (remaining === 0) return 'Expired';
-  const mins = Math.floor(remaining / 60000);
-  const secs = Math.floor((remaining % 60000) / 1000);
-  return `${mins}m ${secs.toString().padStart(2, '0')}s`;
-}
-
-function EscalationSection({ taskId, question, escalationCreatedAt }) {
-  const countdown = useCountdown(escalationCreatedAt);
-  const { updateTask } = useTasks();
-
-  async function handle(action) {
-    if (action === 'approve') {
-      await approveEscalation(taskId);
-      updateTask(taskId, { status: 'COMPLETED', summary: 'Escalation approved.' });
-    } else {
-      await denyEscalation(taskId);
-      updateTask(taskId, { status: 'FAILED', summary: 'Escalation denied.' });
-    }
-  }
-
+function PlanSteps({ steps }) {
+  if (!steps.length) return null;
   return (
-    <div className="escalation-section">
-      <p className="escalation-question">{question}</p>
-      <div className="escalation-footer">
-        <span className="escalation-timer">Expires in {countdown}</span>
-        <div className="escalation-actions">
-          <button className="btn-approve" onClick={() => handle('approve')}>Approve</button>
-          <button className="btn-deny" onClick={() => handle('deny')}>Deny</button>
-        </div>
-      </div>
+    <div className="plan">
+      <p className="plan__label">Plan</p>
+      {steps.map((step, i) => {
+        const meta = toolMeta(step.tool);
+        const detail = stepDetail(step);
+        return (
+          <div key={i} className="plan__step">
+            <span className="plan__step-icon">
+              <Icon name={meta.icon} size={13} />
+            </span>
+            <div className="plan__step-body">
+              <div className="plan__step-title">
+                {meta.label}
+                {step.status && step.status !== 'PENDING' && (
+                  <StatusChip status={step.status} />
+                )}
+              </div>
+              {detail && <p className="plan__step-detail">{detail}</p>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
+/* Standard task card — tap to expand the plan. */
 export default function TaskCard({ task }) {
-  const { id, description, type, status, createdAt, summary, escalationQuestion, escalationCreatedAt } = task;
+  const [open, setOpen] = useState(false);
+  const hasDetail = task.planSteps.length > 0 || task.note;
+  const orb = STATUS_ORB[task.status] || STATUS_ORB.PENDING;
+  const icon = STATUS_META[task.status]?.icon || 'clock';
 
   return (
-    <div className="task-card">
-      <div className="task-card-header">
-        <p className="task-description">{description}</p>
-        <div className="task-badges">
-          <span className="badge badge-type">{type}</span>
-          <span className="badge badge-status" style={{ background: STATUS_COLORS[status] }}>
-            {STATUS_LABELS[status]}
+    <article className="task-card">
+      <button
+        className="task-card__main"
+        onClick={() => hasDetail && setOpen((v) => !v)}
+        aria-expanded={open}
+        style={{ cursor: hasDetail ? 'pointer' : 'default' }}
+      >
+        <span
+          className="task-card__status-orb"
+          style={{ background: orb.bg, color: orb.fg }}
+        >
+          <Icon name={icon} size={16} />
+        </span>
+        <span className="task-card__body">
+          <span className="task-card__desc">{task.description}</span>
+          <span className="task-card__meta">
+            <StatusChip status={task.status} />
+            <span className="chip chip--neutral">{task.typeLabel}</span>
+            <span className="task-card__time">
+              {task.scheduledAt && task.status === 'PENDING'
+                ? `Fires ${formatDateTime(task.scheduledAt)}`
+                : `Created ${formatDateTime(task.createdAt)}`}
+            </span>
           </span>
+        </span>
+        {hasDetail && (
+          <span
+            className={`task-card__chevron${open ? ' task-card__chevron--open' : ''}`}
+          >
+            <Icon name="chevron-down" size={16} />
+          </span>
+        )}
+      </button>
+
+      {open && hasDetail && (
+        <div className="task-card__detail">
+          {task.note && (
+            <p className={`task-card__note task-card__note--${task.note.tone}`}>
+              <Icon
+                name={task.note.tone === 'success' ? 'check-circle' : 'alert-circle'}
+                size={14}
+              />
+              {task.note.text}
+            </p>
+          )}
+          <PlanSteps steps={task.planSteps} />
+        </div>
+      )}
+    </article>
+  );
+}
+
+/* Spotlight card for tasks blocked on the parent's approval. */
+export function ApprovalCard({ task }) {
+  const { approve, deny } = useTasks();
+  const toast = useToast();
+  const now = useNow(1000);
+  const [busy, setBusy] = useState('');
+
+  const remaining = task.escalationDeadline
+    ? countdown(task.escalationDeadline, now)
+    : null;
+
+  const pendingMeta = task.pendingStep ? toolMeta(task.pendingStep.tool) : null;
+  const pendingDetail = task.pendingStep ? stepDetail(task.pendingStep) : '';
+
+  async function act(kind) {
+    if (busy) return;
+    setBusy(kind);
+    try {
+      if (kind === 'approve') {
+        await approve(task.id);
+        toast('Approved — G is on it.', { type: 'success' });
+      } else {
+        await deny(task.id);
+        toast('Denied. G won’t proceed.', { type: 'info' });
+      }
+    } catch (err) {
+      toast(err.message || 'That didn’t go through — try again.', {
+        type: 'error',
+      });
+    } finally {
+      setBusy('');
+    }
+  }
+
+  return (
+    <article className="approval-card">
+      <div className="approval-card__head">
+        <span className="approval-card__icon">
+          <Icon name="shield" size={17} />
+        </span>
+        <div>
+          <p className="approval-card__title">{task.description}</p>
+          <p className="approval-card__question">
+            {pendingMeta
+              ? `G wants to ${pendingMeta.label.toLowerCase()}${pendingDetail ? ` — ${pendingDetail}` : ''}. OK to proceed?`
+              : 'G needs your go-ahead before continuing.'}
+          </p>
         </div>
       </div>
-      <p className="task-created">Created {formatDate(createdAt)}</p>
-
-      {status === 'ESCALATION_PENDING' && escalationQuestion && (
-        <EscalationSection
-          taskId={id}
-          question={escalationQuestion}
-          escalationCreatedAt={escalationCreatedAt}
-        />
-      )}
-
-      {(status === 'COMPLETED' || status === 'FAILED') && summary && (
-        <p className={`task-summary${status === 'FAILED' ? ' task-summary--failed' : ''}`}>
-          {summary}
-        </p>
-      )}
-    </div>
+      <div className="approval-card__foot">
+        <span className="approval-card__timer">
+          <Icon name="clock" size={13} />
+          {remaining
+            ? `Expires in ${remaining}`
+            : task.escalationDeadline
+              ? 'Expired — approve to retry'
+              : 'Waiting on you'}
+        </span>
+        <div className="approval-card__actions">
+          <button
+            className="btn btn--success"
+            onClick={() => act('approve')}
+            disabled={!!busy}
+          >
+            <Icon name="check" size={14} strokeWidth={2.4} />
+            {busy === 'approve' ? 'Approving…' : 'Approve'}
+          </button>
+          <button
+            className="btn btn--danger"
+            onClick={() => act('deny')}
+            disabled={!!busy}
+          >
+            <Icon name="x" size={14} strokeWidth={2.4} />
+            {busy === 'deny' ? 'Denying…' : 'Deny'}
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }

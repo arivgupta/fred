@@ -1,8 +1,10 @@
-// Used GenAI to help me with the layout for this page (knowledgable intern method)
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { setUser, setToken } from '../auth';
+import { setToken, setUser } from '../auth';
+import Logo from '../components/Logo';
 
+// Landing spot for the backend's Google OAuth redirect. Query params carry
+// the session; stash them and route new users into onboarding.
 export default function OAuthCallback() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -15,23 +17,18 @@ export default function OAuthCallback() {
     const isNewUser = params.get('new_user') === 'true';
 
     if (userId && email && token) {
-      setUser({
-        id: userId,
-        email,
-        name: name || '',
-      });
-
+      setUser({ id: userId, email, name: name || '' });
       setToken(token);
-
-      if (isNewUser) {
-        navigate('/onboard/step1', { replace: true });
-      } else {
-        navigate('/tasks', { replace: true });
-      }
+      navigate(isNewUser ? '/onboard/step1' : '/', { replace: true });
     } else {
       navigate('/signin', { replace: true });
     }
   }, [params, navigate]);
 
-  return <p>Signing you in...</p>;
+  return (
+    <div className="oauth-wait">
+      <Logo size={52} />
+      <p>Signing you in…</p>
+    </div>
+  );
 }

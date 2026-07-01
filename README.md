@@ -211,55 +211,65 @@ If you create new files or change directory structures, please run the 'tree' co
 ├── CS130 S26 Final Project Guideline.md
 ├── docker-compose.yml
 ├── frontend
-│   ├── dist
-│   │   ├── assets
-│   │   │   ├── index-CemWpNYj.js
-│   │   │   └── index-CRYxydzC.css
-│   │   ├── favicon.ico
-│   │   └── index.html
 │   ├── index.html
 │   ├── package-lock.json
 │   ├── package.json
 │   ├── public
 │   │   └── favicon.ico
 │   ├── README.md
+│   ├── scripts
+│   │   └── mock-api.mjs
 │   ├── src
-│   │   ├── api
-│   │   │   ├── auth.js
-│   │   │   └── index.js
 │   │   ├── api.js
 │   │   ├── App.jsx
 │   │   ├── auth.js
 │   │   ├── components
-│   │   │   ├── Banner.jsx
-│   │   │   ├── common
-│   │   │   ├── FamilyMemberRow.jsx
+│   │   │   ├── AppShell.jsx
+│   │   │   ├── AuthLayout.jsx
+│   │   │   ├── Avatar.jsx
+│   │   │   ├── controls.jsx
+│   │   │   ├── EmptyState.jsx
+│   │   │   ├── GoogleButton.jsx
+│   │   │   ├── Icon.jsx
+│   │   │   ├── Logo.jsx
 │   │   │   ├── MessageBubble.jsx
-│   │   │   ├── NavBar.jsx
-│   │   │   ├── ProgressBar.jsx
-│   │   │   ├── registration
-│   │   │   ├── SuggestionPills.jsx
-│   │   │   ├── TaskCard.jsx
-│   │   │   ├── TaskSidebar.jsx
-│   │   │   ├── TimePicker.jsx
-│   │   │   ├── Toggle.jsx
-│   │   │   ├── TypingIndicator.jsx
-│   │   │   └── VoiceTranscript.jsx
+│   │   │   ├── OnboardLayout.jsx
+│   │   │   ├── Skeleton.jsx
+│   │   │   ├── StatusChip.jsx
+│   │   │   └── TaskCard.jsx
 │   │   ├── context
-│   │   │   └── TaskContext.jsx
+│   │   │   ├── TasksContext.jsx
+│   │   │   └── ToastContext.jsx
+│   │   ├── hooks.js
+│   │   ├── lib
+│   │   │   ├── format.js
+│   │   │   └── tasks.js
 │   │   ├── main.jsx
 │   │   ├── pages
 │   │   │   ├── Chat.jsx
-│   │   │   ├── Conversations.jsx
+│   │   │   ├── History.jsx
+│   │   │   ├── Home.jsx
+│   │   │   ├── NotFound.jsx
 │   │   │   ├── OAuthCallback.jsx
 │   │   │   ├── Onboard
-│   │   │   ├── Profile.jsx
-│   │   │   ├── Register.jsx
+│   │   │   ├── Settings.jsx
 │   │   │   ├── SignIn.jsx
 │   │   │   ├── SignUp.jsx
 │   │   │   └── Tasks.jsx
-│   │   └── styles
-│   │       └── index.css
+│   │   ├── styles
+│   │   │   ├── auth.css
+│   │   │   ├── base.css
+│   │   │   ├── chat.css
+│   │   │   ├── components.css
+│   │   │   ├── history.css
+│   │   │   ├── home.css
+│   │   │   ├── index.css
+│   │   │   ├── onboard.css
+│   │   │   ├── settings.css
+│   │   │   ├── shell.css
+│   │   │   ├── tasks.css
+│   │   │   └── tokens.css
+│   │   └── theme.js
 │   ├── vercel.json
 │   └── vite.config.js
 ├── package-lock.json
